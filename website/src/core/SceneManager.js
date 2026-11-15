@@ -9,6 +9,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRe
 import { TerrainMesh } from '../world/TerrainMesh.js';
 import { WaterMesh } from '../world/WaterMesh.js';
 import { CloudsMesh } from '../world/CloudsMesh.js';
+import { BoundariesMesh } from '../world/BoundariesMesh.js';
 import { createRiskHeatMaterial, updateHeatHotspots } from '../world/RiskShaders.js';
 import { createZoneMarker, createPeakLabel, createStationMarker } from '../world/Markers.js';
 import { createCityBlock } from '../world/Buildings.js';
@@ -64,6 +65,14 @@ export class SceneManager {
     this.cityBlock = createCityBlock({ baseLat, baseLon, terrain: this.terrain });
     this.scene.add(this.cityBlock);
 
+    // Delimitaciones Territoriales 3D (Límites municipales y carreteras estilo Google Maps)
+    this.boundaries = new BoundariesMesh({ baseLat, baseLon, terrain: this.terrain });
+    this.scene.add(this.boundaries.group);
+
+    // Grupo de balizas pulsantes de alerta de deslizamiento
+    this.landslidePulseRings = [];
+    this._initLandslidePulseRings();
+
     this._addPeakLabels();
 
     // Baliza de prediccion interactiva (Click-to-Predict)
@@ -98,8 +107,9 @@ export class SceneManager {
 
   _initScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x070b14);
-    this.scene.fog = new THREE.FogExp2(0x0a1222, 0.0022);
+    // Atmósfera diurna cristalina estilo Google Earth / Apple Daylight
+    this.scene.background = new THREE.Color(0xdbeafe);
+    this.scene.fog = new THREE.FogExp2(0xdbeafe, 0.0011);
 
     this.camera = new THREE.PerspectiveCamera(
       42,
@@ -111,11 +121,11 @@ export class SceneManager {
   }
 
   _initLights() {
-    const hemi = new THREE.HemisphereLight(0x8fb4ff, 0x0d1424, 0.65);
+    const hemi = new THREE.HemisphereLight(0xdbeafe, 0x82705b, 0.95);
     this.scene.add(hemi);
     this.hemiLight = hemi;
 
-    const sun = new THREE.DirectionalLight(0xffe9c4, 1.35);
+    const sun = new THREE.DirectionalLight(0xfff6e8, 1.85);
     sun.position.set(120, 180, 60);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -235,6 +245,82 @@ export class SceneManager {
     this.viewMode = 'flat';
     this.cameraController.flyTo(FLAT_CAMERA_POS, DEFAULT_TARGET, 1800);
     window.dispatchEvent(new CustomEvent('viewmode-changed', { detail: { mode: 'flat' } }));
+  }
+
+  /** Cambia el modo de visualización de mapa tipo Google Maps: 'satellite' | 'terrain' | 'hybrid' */
+  setMapMode(mode) {
+    this.mapMode = mode;
+    this.terrain.setMapMode(mode);
+    if (this.boundaries) {
+      // Las delimitaciones se muestran en modo híbrido y satelital
+      this.boundaries.setVisible(mode === 'hybrid' || mode === 'satellite');
+    }
+  }
+
+  _initLandslidePulseRings() {
+    this.criticalLandslidePoints = [
+      { name: 'Cotahuma / Laderas Oeste', lat: this.baseLat + 0.012, lon: this.baseLon - 0.015, minProgress: 0.1 },
+      { name: 'Falla Kantutani / San Jorge', lat: this.baseLat - 0.008, lon: this.baseLon + 0.005, minProgress: 0.25 },
+      { name: 'Valle de las Flores / Kupini', lat: this.baseLat - 0.025, lon: this.baseLon + 0.028, minProgress: 0.45 },
+      { name: 'Alpacoma / Llojeta', lat: this.baseLat + 0.035, lon: this.baseLon - 0.022, minProgress: 0.6 },
+      { name: 'Yungas - Unduavi / Coroico', lat: this.baseLat + 0.33, lon: this.baseLon + 0.40, minProgress: 0.75 },
+    ];
+
+    this.criticalLandslidePoints.forEach((pt) => {
+      const { x, z } = this.project(pt.lat, pt.lon);
+      const y = this.terrain.heightAt(x, z) + 0.5;
+
+      const ringGeo = new THREE.RingGeometry(2.5, 3.8, 32);
+      ringGeo.rotateX(-Math.PI / 2);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xef4444,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85,
+      });
+
+      const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+      ringMesh.position.set(x, y, z);
+      ringMesh.visible = false;
+      this.scene.add(ringMesh);
+
+      // Baliza de advertencia
+      const el = document.createElement('div');
+      el.className = 'zone-callout risk-critico';
+      el.innerHTML = `
+        <div class="zone-callout__content" style="border-color:#ef4444;">
+          <div class="zone-callout__header" style="color:#ef4444;">
+            <span>⚠</span>
+            <b>${pt.name}</b>
+          </div>
+          <div style="font-size:10px; color:#ef4444; font-weight:700;">
+            PELIGRO DE DESLIZAMIENTO
+          </div>
+        </div>
+      `;
+      const label = new CSS2DObject(el);
+      label.position.set(x, y + 6, z);
+      label.visible = false;
+      this.scene.add(label);
+
+      this.landslidePulseRings.push({
+        mesh: ringMesh,
+        label,
+        point: pt,
+        baseX: x,
+        baseZ: z,
+        baseY: y,
+      });
+    });
+  }
+
+  /** Activa o desactiva las zonas de deslizamiento según el progreso de reproducción temporal */
+  updateLandslideSimulation(progress) {
+    this.landslidePulseRings.forEach((item) => {
+      const active = progress >= item.point.minProgress;
+      item.mesh.visible = active;
+      item.label.visible = active;
+    });
   }
 
   toggleViewMode() {
@@ -461,6 +547,17 @@ export class SceneManager {
     if (this.beaconGroup.visible) {
       const scale = 1.0 + Math.sin(elapsed * 4.0) * 0.15;
       this.beaconRing.scale.set(scale, scale, 1);
+    }
+
+    // Animar anillos de alerta roja de deslizamiento
+    if (this.landslidePulseRings?.length) {
+      this.landslidePulseRings.forEach((item, idx) => {
+        if (item.mesh.visible) {
+          const pulse = 1.0 + Math.sin(elapsed * 5.0 + idx * 1.2) * 0.35;
+          item.mesh.scale.set(pulse, pulse, 1);
+          item.mesh.material.opacity = 0.5 + Math.sin(elapsed * 5.0 + idx * 1.2) * 0.45;
+        }
+      });
     }
 
     // Actualizar mapa de calor InSAR

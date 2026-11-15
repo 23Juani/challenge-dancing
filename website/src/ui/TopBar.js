@@ -1,21 +1,28 @@
 /**
- * Barra superior HUD de TERRA-SAR (Image 2):
- * - Logo de montaña poligonal + nombre + subtítulo "TERRITORIAL INTELLIGENCE SYSTEM"
- * - Pestañas con iconos: Overview, Monitoring, Risk Analysis, Simulation, Resource Prioritization
- * - Widget de ubicación (LA PAZ, BOLIVIA) + timestamp + estado operativo verde + avatar de usuario
+ * Barra superior HUD de TERRA-SAR con estética Apple Liquid Glass (Modo Claro):
+ * - Logo TERRA-SAR + subtítulo "TERRITORIAL INTELLIGENCE SYSTEM"
+ * - Selector de Modos de Mapa tipo Google Maps: [🛰 Satelital] [⛰ Relieve] [🗺 Híbrido]
+ * - Pestañas de control territorial (Overview, Monitoring, Risk Analysis, Simulation)
+ * - Telemetría de ubicación (LA PAZ, BOLIVIA) + timestamp + estado operativo
+ * - Toggle de perspectiva cinemática 2D / 3D Google Earth
  */
 import { SOLUTION_NAME, BASE_LOCATION_LABEL } from '../config.js';
 import { icons } from './icons.js';
 
 const TABS = [
   { id: 'Overview', label: 'Overview', icon: icons.tabOverview },
-  { id: 'Monitoring', label: 'Monitoring', icon: icons.tabMonitoring },
-  { id: 'Risk Analysis', label: 'Risk Analysis', icon: icons.tabRisk },
-  { id: 'Simulation', label: 'Simulation', icon: icons.tabSimulation },
-  { id: 'Resource Prioritization', label: 'Resource Prioritization', icon: icons.tabPrioritization },
+  { id: 'Monitoring', label: 'Monitoreo', icon: icons.tabMonitoring },
+  { id: 'Risk Analysis', label: 'Riesgo Deslizamiento', icon: icons.tabRisk },
+  { id: 'Simulation', label: 'Simulación IA', icon: icons.tabSimulation },
 ];
 
-export function mountTopBar(container, store) {
+const MAP_MODES = [
+  { id: 'satellite', label: '🛰 Satelital', desc: 'Ortofoto satelital fotorrealista' },
+  { id: 'terrain', label: '⛰ Relieve', desc: 'Mapa topográfico con curvas de nivel' },
+  { id: 'hybrid', label: '🗺 Híbrido', desc: 'Satelital + Red vial y delimitaciones' },
+];
+
+export function mountTopBar(container, store, { onSelectMapMode }) {
   const brandTitle = SOLUTION_NAME ? escapeHtml(SOLUTION_NAME) : 'TERRA-SAR';
 
   container.innerHTML = `
@@ -27,6 +34,18 @@ export function mountTopBar(container, store) {
       </div>
     </div>
 
+    <!-- Selector de Modos de Mapa tipo Google Maps -->
+    <div class="map-modes-group liquid-pill" id="map-modes-group" title="Modos de Mapa tipo Google Maps">
+      ${MAP_MODES.map(
+        (m, idx) => `
+          <button class="map-mode-btn${idx === 0 ? ' is-active' : ''}" data-mode="${m.id}" title="${m.desc}">
+            ${m.label}
+          </button>
+        `
+      ).join('')}
+    </div>
+
+    <!-- Pestañas HUD -->
     <nav class="topbar__tabs" id="topbar-tabs">
       ${TABS.map(
         (t, i) => `
@@ -38,6 +57,7 @@ export function mountTopBar(container, store) {
       ).join('')}
     </nav>
 
+    <!-- Indicadores de Ubicación y Estado -->
     <div class="topbar__right">
       <div class="topbar__location">
         <span class="topbar__location-pin">📍</span>
@@ -46,24 +66,31 @@ export function mountTopBar(container, store) {
           <span id="topbar-timestamp">Últ. actualización: 14/06/2026 16:32</span>
         </div>
       </div>
-      <div class="topbar__status">
+      <div class="topbar__status" id="topbar-status-badge">
         <span class="status-dot"></span>
         <span id="topbar-status-label">Sistema Operativo</span>
       </div>
       <button class="topbar__view-btn liquid-pill" id="btn-topbar-viewmode" title="Alternar Vista Plana 2D y Google Earth 3D">
-        🚀 Google Earth 3D
+        🏔 Google Earth 3D
       </button>
-      <button class="topbar__theme-btn liquid-pill" id="btn-toggle-theme" title="Alternar Modo Claro / Oscuro">
-        ☀️ Modo Claro
-      </button>
-      <button class="topbar__info-btn liquid-pill" id="btn-toggle-info" title="Información del Proyecto y Misión NISAR">
-        ℹ Misión
-      </button>
-      <div class="topbar__user" title="Perfil de usuario">
+      <div class="topbar__user" title="Perfil de Operador Territorial">
         ${icons.user}
       </div>
     </div>
   `;
+
+  // Selector de Modos de Mapa tipo Google Maps
+  const mapModesEl = container.querySelector('#map-modes-group');
+  mapModesEl?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.map-mode-btn');
+    if (!btn) return;
+    mapModesEl.querySelectorAll('.map-mode-btn').forEach((b) => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    const mode = btn.dataset.mode;
+    store.set({ activeMapMode: mode });
+    if (onSelectMapMode) onSelectMapMode(mode);
+    window.dispatchEvent(new CustomEvent('mapmode-changed', { detail: { mode } }));
+  });
 
   const viewBtn = container.querySelector('#btn-topbar-viewmode');
   viewBtn?.addEventListener('click', () => {
@@ -73,25 +100,12 @@ export function mountTopBar(container, store) {
   window.addEventListener('viewmode-changed', (e) => {
     const mode = e.detail?.mode ?? '3d';
     if (viewBtn) {
-      viewBtn.textContent = mode === 'flat' ? '🚀 Google Earth 3D' : '🗺 Vista Plana 2D';
+      viewBtn.textContent = mode === 'flat' ? '🏔 Google Earth 3D' : '🗺 Vista Plana 2D';
     }
   });
 
-  const themeBtn = container.querySelector('#btn-toggle-theme');
-  themeBtn?.addEventListener('click', () => {
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const nextTheme = isLight ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', nextTheme);
-    themeBtn.textContent = isLight ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
-    window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: nextTheme } }));
-  });
-
-  container.querySelector('#btn-toggle-info')?.addEventListener('click', () => {
-    window.dispatchEvent(new CustomEvent('toggle-landing'));
-  });
-
   const tabsEl = container.querySelector('#topbar-tabs');
-  tabsEl.addEventListener('click', (e) => {
+  tabsEl?.addEventListener('click', (e) => {
     const btn = e.target.closest('.topbar__tab');
     if (!btn) return;
     tabsEl.querySelectorAll('.topbar__tab').forEach((b) => b.classList.remove('is-active'));

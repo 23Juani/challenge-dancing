@@ -5,12 +5,17 @@
  * - Altiplano: Meseta elevada al Oeste (El Alto ~4.150 m)
  * - Cuenca urbana de La Paz (depresión central ~3.600 m)
  * - Los Yungas y Piedemonte: Descenso abrupto oriental hacia selva y valles húmedos (~1.500 - 900 m)
+ * Soporta Modos de Mapa tipo Google Maps: 'satellite', 'terrain', 'hybrid'
  */
 import * as THREE from 'three';
 import { makeProjector, ELEVATION_SCALE } from './geo.js';
-import { createSatelliteTexture } from './SatelliteTexture.js';
+import {
+  createSatelliteTexture,
+  createTerrainReliefTexture,
+  createHybridTexture,
+} from './SatelliteTexture.js';
 
-const SIZE = 620; // Extensión amplia para todo el Departamento de La Paz
+const SIZE = 620;
 const SEGMENTS = 260;
 
 function valueNoise(x, z, seed = 1) {
@@ -97,16 +102,23 @@ export class TerrainMesh {
     this.geometry = geometry;
     this.baseHeights = baseHeights;
 
-    const satTexture = createSatelliteTexture();
+    // Crear y cachear texturas para los 3 modos de mapa
+    this.textures = {
+      satellite: createSatelliteTexture(),
+      terrain: null,
+      hybrid: null,
+    };
 
-    const material = new THREE.MeshStandardMaterial({
-      map: satTexture,
+    this.currentMode = 'satellite';
+
+    this.material = new THREE.MeshStandardMaterial({
+      map: this.textures.satellite,
       roughness: 0.88,
       metalness: 0.12,
       flatShading: false,
     });
 
-    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.receiveShadow = true;
     this.mesh.castShadow = false;
 
@@ -116,9 +128,20 @@ export class TerrainMesh {
     this.applyExaggeration(1.8);
   }
 
+  /** Alterna el modo de mapa tipo Google Maps: 'satellite' | 'terrain' | 'hybrid' */
+  setMapMode(mode) {
+    if (!this.textures[mode]) {
+      if (mode === 'terrain') this.textures.terrain = createTerrainReliefTexture();
+      else if (mode === 'hybrid') this.textures.hybrid = createHybridTexture();
+    }
+    const tex = this.textures[mode] ?? this.textures.satellite;
+    this.material.map = tex;
+    this.material.needsUpdate = true;
+    this.currentMode = mode;
+  }
+
   /**
    * Controla la transición de Mapa Plano 2D (morph = 0.0) a Google Earth 3D (morph = 1.0).
-   * Cuando morph es 0, toda la superficie es plana como un mapa satelital cenital.
    */
   setReliefMorph(morphFactor) {
     this.reliefMorph = THREE.MathUtils.clamp(morphFactor, 0.0, 1.0);

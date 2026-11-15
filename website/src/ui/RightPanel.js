@@ -211,7 +211,7 @@ function renderSparkline(svg, trend, color) {
 
   const circles = coords
     .map(
-      (c) => `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.8" fill="${color}" stroke="#060b13" stroke-width="1.2" />`
+      (c) => `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.8" fill="${color}" stroke="#ffffff" stroke-width="1.2" />`
     )
     .join('');
 

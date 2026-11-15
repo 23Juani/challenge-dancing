@@ -115,12 +115,12 @@ export function mountBottomBar(
         <span>970 m</span>
       </div>
       <svg class="elevation-profile-widget__chart" viewBox="0 0 110 52" preserveAspectRatio="none">
-        <path d="M0,45 Q20,38 35,12 Q45,28 58,6 Q75,32 95,44 L110,48" fill="none" stroke="rgba(34, 211, 238, 0.6)" stroke-width="1.8"/>
+        <path d="M0,45 Q20,38 35,12 Q45,28 58,6 Q75,32 95,44 L110,48" fill="none" stroke="rgba(2, 132, 199, 0.7)" stroke-width="1.8"/>
         <path d="M0,45 Q20,38 35,12 Q45,28 58,6 Q75,32 95,44 L110,48 L110,52 L0,52 Z" fill="url(#elevGrad)" opacity="0.32"/>
         <circle cx="58" cy="6" r="3.5" fill="#EF4444"/>
         <defs>
           <linearGradient id="elevGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop stop-color="#22D3EE"/>
+            <stop stop-color="#0284c7"/>
             <stop offset="1" stop-color="transparent"/>
           </linearGradient>
         </defs>

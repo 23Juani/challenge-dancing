@@ -8,7 +8,6 @@ import { mountLeftPanel } from './ui/LeftPanel.js';
 import { mountRightPanel } from './ui/RightPanel.js';
 import { mountBottomBar } from './ui/BottomBar.js';
 import { mountAlertOverlay } from './ui/AlertOverlay.js';
-import { mountLandingHero } from './ui/LandingHero.js';
 import { icons } from './ui/icons.js';
 
 const DEFAULT_LAT = -16.5204;
@@ -16,16 +15,20 @@ const DEFAULT_LON = -68.1297;
 
 async function bootstrap() {
   const viewport = document.getElementById('viewport');
+  const appContainer = document.getElementById('app');
 
   let config = null;
   try {
     config = await api.getConfig();
   } catch (err) {
-    console.warn('No se pudo contactar al backend en /api/v1/config. Verifica que esté corriendo.', err);
+    console.warn('No se pudo contactar al backend en /api/v1/config. Usando configuración base local.', err);
   }
 
   const baseLat = config?.base_location?.lat ?? DEFAULT_LAT;
   const baseLon = config?.base_location?.lon ?? DEFAULT_LON;
+
+  // Forzar Modo Claro diurno Apple Liquid Glass
+  document.documentElement.setAttribute('data-theme', 'light');
 
   const scene = new SceneManager({ container: viewport, baseLat, baseLon });
 
@@ -37,15 +40,25 @@ async function bootstrap() {
     compassEl.innerHTML = icons.compass;
   }
 
-  // Montar HUD Liquid Glass de TERRA-SAR
-  mountTopBar(document.getElementById('topbar'), store);
+  // Montar TopBar con selector de Modos de Mapa tipo Google Maps
+  mountTopBar(document.getElementById('topbar'), store, {
+    onSelectMapMode: (mode) => {
+      scene.setMapMode(mode);
+    },
+  });
+
+  // Montar Panel Izquierdo de Capas Territoriales y Telemetría NISAR
   mountLeftPanel(document.getElementById('panel-left'), store, {
     onToggleLayer: (kind, visible) => scene.setLayerVisible(kind, visible),
     onSelectNisarMode: () => {
       scene.triggerAlertFlash();
     },
   });
+
+  // Montar Panel Derecho de Diagnóstico de Área y Predicción AI
   mountRightPanel(document.getElementById('panel-right'), store);
+
+  // Montar Barra Inferior de Control y Reproductor Temporal
   mountBottomBar(document.getElementById('bottombar'), store, {
     onPan: (dx, dz) => scene.cameraController.pan(dx, dz),
     onZoom: (delta) => scene.cameraController.zoom(delta),
@@ -56,41 +69,27 @@ async function bootstrap() {
         { x: 0, y: 0, z: 0 }
       );
     },
-    onSimulate: () => runSimulation(scene),
+    onSimulate: () => runSimulation(scene, appContainer),
     onToggleViewMode: () => scene.toggleViewMode(),
     onTimelineChange: ({ stepIndex, totalSteps, progress, stepInfo }) => {
       scene.setTimelineProgress(progress);
-      handleTimelineStep(stepInfo, progress);
+      scene.updateLandslideSimulation(progress);
+      handleTimelineStep(stepInfo, progress, appContainer);
     },
   });
 
+  // Overlay de alertas críticas
   const alertOverlay = mountAlertOverlay(document.getElementById('alert-overlay'));
 
-  // Montar Landing Page (accesible vía botón ℹ Misión o toggle)
-  const landing = mountLandingHero(document.getElementById('landing-container'), {
-    onExplore: () => {
-      scene.enterGoogleEarth3D();
-    },
-  });
-
-  window.addEventListener('theme-changed', (e) => {
-    scene.setTheme(e.detail.theme);
+  window.addEventListener('mapmode-changed', (e) => {
+    scene.setMapMode(e.detail.mode);
   });
 
   window.addEventListener('toggle-viewmode', () => {
     scene.toggleViewMode();
   });
 
-  window.addEventListener('toggle-landing', () => {
-    const screen = document.getElementById('landing-screen');
-    if (screen?.classList.contains('is-hidden')) {
-      landing.returnLanding();
-    } else {
-      landing.enterApp();
-    }
-  });
-
-  // Escuchar evento de Click-to-Predict en cualquier coordenada del departamento
+  // Raycaster Click-to-Predict en cualquier coordenada del terreno
   window.addEventListener('predict-coordinates', async (e) => {
     const { lat, lon } = e.detail;
     try {
@@ -104,8 +103,7 @@ async function bootstrap() {
       });
       scene.triggerAlertFlash();
     } catch (err) {
-      console.warn('Fallo consulta a /api/v1/predict, usando evaluación heurística local:', err);
-      // Fallback heurístico en caso de backend ocupado
+      console.warn('Fallback heurístico local para predicción:', err);
       const distToIllimani = Math.hypot(lat - (-16.67), lon - (-67.95));
       const isHighSlope = distToIllimani < 0.25;
       const score = isHighSlope ? 0.88 : 0.45;
@@ -136,6 +134,7 @@ async function bootstrap() {
     }
   });
 
+  // Cargar capas territoriales y zonas de monitoreo
   await loadLayersAndZones(scene);
 
   // Escuchar alertas en tiempo real vía WebSocket
@@ -152,16 +151,36 @@ async function bootstrap() {
   });
 }
 
-function handleTimelineStep(stepInfo, progress) {
+function handleTimelineStep(stepInfo, progress, appContainer) {
   const current = store.get('selectedAssessment');
+  const currentDisp = parseFloat(stepInfo.disp.replace(' mm', ''));
+  const score = stepInfo.score;
+
+  // Activar o desactivar el efecto de parpadeo rojo en todo el Liquid Glass del sitio web
+  const statusBadge = document.getElementById('topbar-status-badge');
+  const statusLabel = document.getElementById('topbar-status-label');
+
+  if (score > 0.6) {
+    appContainer.classList.add('is-emergency-alert');
+    if (statusBadge && statusLabel) {
+      statusBadge.classList.add('is-alert');
+      statusLabel.textContent = 'ALERTA DESLIZAMIENTOS';
+    }
+  } else {
+    appContainer.classList.remove('is-emergency-alert');
+    if (statusBadge && statusLabel) {
+      statusBadge.classList.remove('is-alert');
+      statusLabel.textContent = 'Sistema Operativo';
+    }
+  }
+
   if (!current) return;
 
-  const currentDisp = parseFloat(stepInfo.disp.replace(' mm', ''));
   const newAssessment = {
     ...current,
     displacement_mm_month: currentDisp,
-    risk_score: stepInfo.score,
-    risk_level: stepInfo.score > 0.8 ? 'critico' : stepInfo.score > 0.5 ? 'alerta' : 'precaucion',
+    risk_score: score,
+    risk_level: score > 0.8 ? 'critico' : score > 0.5 ? 'alerta' : 'precaucion',
   };
   store.set({ selectedAssessment: newAssessment });
 }
@@ -214,7 +233,7 @@ function selectZone(scene, zoneId) {
   if (zone) scene.focusOnZone(zone);
 }
 
-async function runSimulation(scene) {
+async function runSimulation(scene, appContainer) {
   const selected = store.get('selectedZone');
   const current = store.get('selectedAssessment');
   try {
@@ -227,6 +246,8 @@ async function runSimulation(scene) {
     });
     store.set({ selectedAssessment: result.assessment });
     scene.triggerAlertFlash();
+    appContainer.classList.add('is-emergency-alert');
+    scene.updateLandslideSimulation(0.95);
   } catch (err) {
     console.warn('Error ejecutando simulación', err);
   }
