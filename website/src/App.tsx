@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import heroImage from "./la-paz-hero.jpg";
 import "./app.css";
 import {
   cargarLluvia,
@@ -8,15 +7,16 @@ import {
   type Lluvia,
   type PuntoInsar,
   type RiesgoZona,
-  COLOR,
-  ETIQUETA,
-  formatearFecha,
 } from "./data";
 import { actualizarAlerta, cargarBackend, conectarAlertas } from "./api";
+import { LangProvider, useLang } from "./i18n";
+import Inicio from "./views/Inicio";
 import CentroControl from "./views/CentroControl";
 import Simulador from "./views/Simulador";
 import MiZona from "./views/MiZona";
 import Panel from "./views/Panel";
+
+export const LOGO = `${import.meta.env.BASE_URL}logo-bennett.png`;
 
 export type Datos = {
   puntos: PuntoInsar[];
@@ -31,23 +31,32 @@ export type Datos = {
 };
 
 const RUTAS = ["inicio", "control", "simulador", "zona", "panel"] as const;
-type Ruta = (typeof RUTAS)[number];
+export type Ruta = (typeof RUTAS)[number];
 
-function rutaActual(): Ruta {
-  const h = window.location.hash.replace("#", "") as Ruta;
-  return (RUTAS as readonly string[]).includes(h) ? h : "inicio";
+function leerHash(): { ruta: Ruta; ancla?: string } {
+  const [r, q] = window.location.hash.replace("#", "").split("?");
+  if (r === "control" || r === "mapa") return { ruta: "control" };
+  if (r === "simulador") return { ruta: "simulador" };
+  if (r === "zona") return { ruta: "zona" };
+  if (r === "panel" || r === "analisis") return { ruta: "panel" };
+  if ((RUTAS as readonly string[]).includes(r)) return { ruta: r as Ruta };
+  return { ruta: "inicio", ancla: r || undefined };
 }
 
-export const Arrow = () => (
-  <svg viewBox="0 0 18 18" aria-hidden="true">
-    <path d="M3.75 9h10.5M10.5 5.25 14.25 9l-3.75 3.75" />
-  </svg>
+export const Signal = () => (
+  <img src={`${import.meta.env.BASE_URL}logo-bennett.png`} alt="" aria-hidden="true" style={{ width: 24, height: 24, objectFit: "contain" }} />
 );
 
-export const Signal = () => <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" aria-hidden="true" />;
-
 export default function App() {
-  const [ruta, setRuta] = useState<Ruta>(rutaActual());
+  return (
+    <LangProvider>
+      <Shell />
+    </LangProvider>
+  );
+}
+
+function Shell() {
+  const [estado, setEstado] = useState(leerHash());
   const [puntos, setPuntosState] = useState<PuntoInsar[]>([]);
   const [fuentePuntos, setFuente] = useState("cargando…");
   const [nisar, setNisar] = useState<EstadoNisar>({ estado: "cargando" });
@@ -58,8 +67,15 @@ export default function App() {
 
   useEffect(() => {
     const alCambiar = () => {
-      setRuta(rutaActual());
-      window.scrollTo(0, 0);
+      const nuevo = leerHash();
+      setEstado((anterior) => {
+        if (nuevo.ancla) {
+          setTimeout(() => document.getElementById(nuevo.ancla!)?.scrollIntoView({ behavior: "smooth" }), 40);
+        } else if (anterior.ruta !== nuevo.ruta) {
+          window.scrollTo(0, 0);
+        }
+        return nuevo;
+      });
     };
     window.addEventListener("hashchange", alCambiar);
     return () => window.removeEventListener("hashchange", alCambiar);
@@ -70,21 +86,27 @@ export default function App() {
     cargarLluvia().then(setLluvia);
     let cancelado = false;
     let desconectar: (() => void) | undefined;
-    cargarBackend().then((resultado) => {
-      if (cancelado) return;
-      setPuntosState(resultado.puntos);
-      setFuente(resultado.fuente);
-      setRiesgo(resultado.riesgo);
-      setBackend({ estado: "ok", mensaje: "", enVivo: false });
-      desconectar = conectarAlertas(
-        (alerta) => setRiesgo((anterior) => actualizarAlerta(anterior, alerta)),
-        (enVivo) => setBackend((anterior) => ({ ...anterior, enVivo })),
-      );
-    }).catch((error: unknown) => {
-      if (cancelado) return;
-      setFuente("sin datos del backend");
-      setBackend({ estado: "error", mensaje: error instanceof Error ? error.message : String(error), enVivo: false });
-    });
+    cargarBackend()
+      .then((resultado) => {
+        if (cancelado) return;
+        setPuntosState(resultado.puntos);
+        setFuente(resultado.fuente);
+        setRiesgo(resultado.riesgo);
+        setBackend({ estado: "ok", mensaje: "", enVivo: false });
+        desconectar = conectarAlertas(
+          (alerta) => setRiesgo((anterior) => actualizarAlerta(anterior, alerta)),
+          (enVivo) => setBackend((anterior) => ({ ...anterior, enVivo })),
+        );
+      })
+      .catch((error: unknown) => {
+        if (cancelado) return;
+        setFuente("sin datos del backend");
+        setBackend({
+          estado: "error",
+          mensaje: error instanceof Error ? error.message : String(error),
+          enVivo: false,
+        });
+      });
     return () => {
       cancelado = true;
       desconectar?.();
@@ -106,15 +128,103 @@ export default function App() {
     backend,
   };
 
-  if (ruta === "inicio") return <Landing datos={datos} />;
+  if (estado.ruta === "inicio") {
+    return (
+      <div className="sitio">
+        <Cabecera ruta={estado.ruta} />
+        <main>
+          <Inicio />
+        </main>
+        <Pie />
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
-      <BarraApp ruta={ruta} datos={datos} />
-      {ruta === "control" && <CentroControl datos={datos} />}
-      {ruta === "simulador" && <Simulador datos={datos} />}
-      {ruta === "zona" && <MiZona datos={datos} />}
-      {ruta === "panel" && <Panel datos={datos} />}
+      <BarraApp ruta={estado.ruta} datos={datos} />
+      {estado.ruta === "control" && <CentroControl datos={datos} />}
+      {estado.ruta === "simulador" && <Simulador datos={datos} />}
+      {estado.ruta === "zona" && <MiZona datos={datos} />}
+      {estado.ruta === "panel" && <Panel datos={datos} />}
     </div>
+  );
+}
+
+function Cabecera({ ruta }: { ruta: Ruta }) {
+  const { t, lang, setLang } = useLang();
+  const [scroll, setScroll] = useState(false);
+
+  useEffect(() => {
+    const f = () => setScroll(window.scrollY > 8);
+    f();
+    window.addEventListener("scroll", f, { passive: true });
+    return () => window.removeEventListener("scroll", f);
+  }, []);
+
+  const items = [
+    { id: "inicio", href: "#inicio", label: t.nav.inicio },
+    { id: "control", href: "#control", label: "Centro de control" },
+    { id: "simulador", href: "#simulador", label: t.nav.simulador },
+    { id: "zona", href: "#zona", label: "Mi zona" },
+    { id: "panel", href: "#panel", label: "Autoridades" },
+  ];
+
+  return (
+    <header className={`cabecera ${scroll ? "con-sombra" : ""}`}>
+      <a className="marca" href="#inicio" aria-label="BENNETT">
+        <img src={LOGO} alt="" />
+        <span>
+          <strong>BENNETT</strong>
+          <small>NASA Space Apps 2026</small>
+        </span>
+      </a>
+      <nav className="pestanas" aria-label="Secciones">
+        {items.map((it) => (
+          <a key={it.id} href={it.href} aria-current={ruta === it.id ? "page" : undefined}>
+            {it.label}
+          </a>
+        ))}
+      </nav>
+      <div className="switch-idioma" role="group" aria-label={t.nav.idioma}>
+        <span className={`switch-pildora ${lang === "en" ? "der" : ""}`} aria-hidden="true" />
+        <button type="button" aria-pressed={lang === "es"} onClick={() => setLang("es")}>
+          ES
+        </button>
+        <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")}>
+          EN
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function Pie() {
+  const { t } = useLang();
+  return (
+    <footer className="pie">
+      <div className="pie-marca">
+        <img src={LOGO} alt="" />
+        <div>
+          <strong>BENNETT</strong>
+          <p>{t.inicio.pie}</p>
+        </div>
+      </div>
+      <div className="pie-links">
+        <a href="https://science.nasa.gov/mission/nisar/" target="_blank" rel="noreferrer">
+          NASA NISAR ↗
+        </a>
+        <a href="https://search.asf.alaska.edu/" target="_blank" rel="noreferrer">
+          ASF Vertex ↗
+        </a>
+        <a href="https://gpm.nasa.gov/data/imerg" target="_blank" rel="noreferrer">
+          GPM IMERG ↗
+        </a>
+        <a href="https://www.spaceappschallenge.org/" target="_blank" rel="noreferrer">
+          Space Apps ↗
+        </a>
+      </div>
+    </footer>
   );
 }
 
@@ -127,14 +237,32 @@ function BarraApp({ ruta, datos }: { ruta: Ruta; datos: Datos }) {
         <span>BENNETT</span>
       </a>
       <nav className="app-nav" aria-label="Secciones">
-        <a href="#control" aria-current={ruta === "control" ? "page" : undefined}>Centro de control</a>
-        <a href="#simulador" aria-current={ruta === "simulador" ? "page" : undefined}>Simulador 3D</a>
-        <a href="#zona" aria-current={ruta === "zona" ? "page" : undefined}>Mi zona</a>
-        <a href="#panel" aria-current={ruta === "panel" ? "page" : undefined}>Autoridades</a>
+        <a href="#control" aria-current={ruta === "control" ? "page" : undefined}>
+          Centro de control
+        </a>
+        <a href="#simulador" aria-current={ruta === "simulador" ? "page" : undefined}>
+          Simulador 3D
+        </a>
+        <a href="#zona" aria-current={ruta === "zona" ? "page" : undefined}>
+          Mi zona
+        </a>
+        <a href="#panel" aria-current={ruta === "panel" ? "page" : undefined}>
+          Autoridades
+        </a>
       </nav>
       <div className="app-status">
-        <span className={`chip ${datos.backend.estado === "error" ? "chip-err" : datos.backend.enVivo ? "chip-ok" : ""}`} title={datos.backend.mensaje}>
-          <i /> {datos.backend.estado === "cargando" ? "Backend: conectando…" : datos.backend.estado === "error" ? "Backend: sin conexión" : datos.backend.enVivo ? "Backend: en vivo" : "Backend: alertas desconectadas"}
+        <span
+          className={`chip ${datos.backend.estado === "error" ? "chip-err" : datos.backend.enVivo ? "chip-ok" : ""}`}
+          title={datos.backend.mensaje}
+        >
+          <i />{" "}
+          {datos.backend.estado === "cargando"
+            ? "Backend: conectando…"
+            : datos.backend.estado === "error"
+              ? "Backend: sin conexión"
+              : datos.backend.enVivo
+                ? "Backend: en vivo"
+                : "Backend: alertas desconectadas"}
         </span>
         <span className={`chip ${n.estado === "ok" ? "chip-ok" : n.estado === "error" ? "chip-err" : ""}`}>
           <i />
@@ -147,172 +275,5 @@ function BarraApp({ ruta, datos }: { ruta: Ruta; datos: Datos }) {
         </span>
       </div>
     </header>
-  );
-}
-
-const features = [
-  { number: "01", eyebrow: "Gemelo digital", title: "Centro de control", text: "Terreno 3D de La Paz con el movimiento del suelo y las alertas de cada pasada NISAR.", href: "#control" },
-  { number: "02", eyebrow: "Simulador 3D", title: "¿Qué pasaría si llueve?", text: "Sube la lluvia y mira hasta dónde llegaría la ladera y qué edificios alcanzaría.", href: "#simulador" },
-  { number: "03", eyebrow: "Ciudadanos", title: "Mi zona", text: "Busca tu barrio, mira su semáforo y recibe alertas.", href: "#zona" },
-  { number: "04", eyebrow: "Autoridades", title: "Panel de gestión", text: "Ranking de zonas que aceleran, alertas y reportes.", href: "#panel" },
-];
-
-function Landing({ datos }: { datos: Datos }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const closeMenu = () => setMenuOpen(false);
-  const top = datos.riesgo[0];
-  const ultima = datos.nisar.estado === "ok" ? datos.nisar.pasadas[0] : undefined;
-
-  return (
-    <main>
-      <section className="hero" id="inicio">
-        <img className="hero-image" src={heroImage} alt="Vista panorámica de La Paz, Bolivia, rodeada por montañas" />
-        <div className="hero-shade" />
-
-        <header className="site-header">
-          <a className="brand" href="#inicio" aria-label="BENNETT, inicio">
-            <Signal />
-            <span>BENNETT</span>
-          </a>
-          <button className="menu-button" type="button" aria-expanded={menuOpen} aria-controls="main-navigation" onClick={() => setMenuOpen((v) => !v)}>
-            <span />
-            <span />
-            <span />
-            <span className="sr-only">Abrir navegación</span>
-          </button>
-          <div className={`header-links ${menuOpen ? "is-open" : ""}`} id="main-navigation">
-            <nav aria-label="Navegación principal">
-              <a href="#control" onClick={closeMenu}>Centro de control</a>
-              <a href="#simulador" onClick={closeMenu}>Simulador 3D</a>
-              <a href="#zona" onClick={closeMenu}>Mi zona</a>
-              <a href="#panel" onClick={closeMenu}>Autoridades</a>
-            </nav>
-            <div className="header-icons" aria-label="Tecnologías y datos">
-              <a href="https://science.nasa.gov/mission/nisar/" target="_blank" rel="noreferrer" title="NISAR · NASA">N</a>
-              <span aria-hidden="true">×</span>
-              <a href="https://www.isro.gov.in/NISARSatellite.html" target="_blank" rel="noreferrer" title="ISRO">I</a>
-            </div>
-          </div>
-        </header>
-
-        <div className="hero-content">
-          <div className="data-note">
-            <div className="data-orbit" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-            <p>
-              Datos satelitales
-              <br />
-              NISAR · banda L
-            </p>
-          </div>
-          <p className="kicker">Monitoreo de deslizamientos · La Paz, Bolivia</p>
-          <h1>
-            La Paz se mueve.
-            <span>El radar sí lo siente.</span>
-          </h1>
-          <p className="intro">
-            BENNETT muestra evaluaciones de riesgo y desplazamiento proporcionadas por el backend para monitorear laderas.
-          </p>
-          <div className="hero-actions">
-            <a className="primary-button" href="#control">
-              Entrar al centro de control <Arrow />
-            </a>
-            <a className="text-link" href="#zona">¿Mi zona es segura?</a>
-          </div>
-        </div>
-
-        {top && (
-          <a className="live-alert" href="#control" style={{ borderColor: COLOR[top.nivel] }}>
-            <span className="live-tag" style={{ color: COLOR[top.nivel] }}>
-              <i style={{ background: COLOR[top.nivel] }} /> {top.nivelBackend === "critico" ? "Crítico" : ETIQUETA[top.nivel]} · {datos.backend.enVivo ? "en vivo" : "última evaluación"}
-            </span>
-            <strong>{top.nombre}</strong>
-            <span>
-              {top.velocidad} mm/mes · índice {top.indice}/100 · lluvia 24 h {top.lluvia24} mm
-            </span>
-            <small>
-              {ultima ? `Última pasada NISAR: ${formatearFecha(ultima.fecha)}` : "Buscando pasadas NISAR sobre La Paz…"}
-            </small>
-          </a>
-        )}
-        {!top && datos.backend.estado !== "ok" && (
-          <div className="live-alert" role="status">
-            <span className="live-tag">{datos.backend.estado === "cargando" ? "Conectando con el backend…" : "Backend sin conexión"}</span>
-            {datos.backend.estado === "error" && <small>{datos.backend.mensaje}</small>}
-          </div>
-        )}
-
-        <div className="scroll-cue" aria-hidden="true">
-          <span>Descubre BENNETT</span>
-          <i />
-        </div>
-        <p className="photo-credit">Foto: Jack Prommel / Unsplash</p>
-      </section>
-
-      <section className="platform" id="plataforma">
-        <div className="platform-heading">
-          <p>La plataforma</p>
-          <h2>Cuatro formas de usar BENNETT</h2>
-        </div>
-        <div className="feature-grid">
-          {features.map((f) => (
-            <article className="feature-card" key={f.number}>
-              <span className="feature-number">{f.number}</span>
-              <p>{f.eyebrow}</p>
-              <h3>{f.title}</h3>
-              <span>{f.text}</span>
-              <a href={f.href} aria-label={`Abrir ${f.title}`}>
-                <Arrow />
-              </a>
-            </article>
-          ))}
-        </div>
-
-        <div className="sources">
-          <div className="platform-heading">
-            <p>Datos conectados</p>
-            <h2>NISAR es el corazón. Lo demás le da contexto.</h2>
-          </div>
-          <div className="source-grid">
-            <article className="source-card source-main">
-              <span>Fuente principal · NASA</span>
-              <h3>Satélite NISAR (NASA–ISRO)</h3>
-              <p>
-                Las pasadas se consultan en ASF DAAC; las evaluaciones y alertas proceden del backend y no se actualizan automáticamente por cada pasada.
-              </p>
-              <a href="https://search.asf.alaska.edu/" target="_blank" rel="noreferrer">Abrir ASF Vertex ↗</a>
-            </article>
-            <article className="source-card">
-              <span>NASA · JPL</span>
-              <h3>OPERA y ASF Displacement Portal</h3>
-              <p>Referencia de cómo NASA publica el desplazamiento InSAR.</p>
-            </article>
-            <article className="source-card">
-              <span>Lluvia</span>
-              <h3>Open-Meteo (y GPM IMERG de NASA)</h3>
-              <p>Lluvia de las últimas 72 h y pronóstico, para el índice y el simulador.</p>
-            </article>
-            <article className="source-card">
-              <span>Relieve y ciudad</span>
-              <h3>DEM + edificios OpenStreetMap</h3>
-              <p>Terreno real del valle y edificios en 3D para ver qué queda expuesto.</p>
-            </article>
-          </div>
-        </div>
-
-        <div className="zone-panel" id="mi-zona">
-          <div>
-            <p>Para vecinos</p>
-            <h2>¿Se mueve el suelo donde vivo?</h2>
-          </div>
-          <a className="primary-button dark-button" href="#zona">
-            Consultar mi zona <Arrow />
-          </a>
-        </div>
-      </section>
-    </main>
   );
 }
