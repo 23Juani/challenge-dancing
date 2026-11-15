@@ -1,42 +1,18 @@
 <!doctype html>
-<html lang="es">
+<html lang="<!-- figma:lang -->">
   <head>
+    <!-- figma:head-start -->
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TERRA-SAR | Territorial Intelligence System</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <title><!-- figma:title --></title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <!-- figma:head-end -->
   </head>
   <body>
-    <div id="app">
-      <!-- 3D Canvas Viewport -->
-      <div id="viewport"></div>
-
-      <!-- Widgets Flotantes sobre el terreno -->
-      <div class="viewport-compass" id="viewport-compass"></div>
-      <div class="viewport-scale">
-        <div class="viewport-scale__bar"></div>
-        <div class="viewport-scale__labels">
-          <span>0</span>
-          <span>1</span>
-          <span>2 km</span>
-        </div>
-      </div>
-
-      <!-- HUD TERRA-SAR (Glassmorphism) -->
-      <header class="topbar glass" id="topbar"></header>
-      <aside class="panel panel--left glass" id="panel-left"></aside>
-      <aside class="panel panel--right glass" id="panel-right"></aside>
-      <footer class="bottombar glass" id="bottombar"></footer>
-
-      <!-- Overlay de Alerta Crítica en Tiempo Real -->
-      <div id="alert-overlay" class="alert-overlay hidden"></div>
-    </div>
-    <script type="module" src="/src/main.js"></script>
+    <!-- figma:body-start -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- figma:body-end -->
   </body>
 </html>
