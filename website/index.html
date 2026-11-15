@@ -4,21 +4,41 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sistema de Alerta Temprana de Deslizamientos</title>
+    <title>TERRA-SAR | Territorial Intelligence System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="app">
+      <!-- 3D Canvas Viewport -->
       <div id="viewport"></div>
 
+      <!-- Widgets Flotantes sobre el terreno -->
+      <div class="viewport-compass" id="viewport-compass"></div>
+      <div class="viewport-scale">
+        <div class="viewport-scale__bar"></div>
+        <div class="viewport-scale__labels">
+          <span>0</span>
+          <span>1</span>
+          <span>2 km</span>
+        </div>
+      </div>
+
+      <!-- HUD TERRA-SAR (Glassmorphism) -->
       <header class="topbar glass" id="topbar"></header>
-
       <aside class="panel panel--left glass" id="panel-left"></aside>
-
       <aside class="panel panel--right glass" id="panel-right"></aside>
-
       <footer class="bottombar glass" id="bottombar"></footer>
 
+      <!-- Overlay de Alerta Crítica en Tiempo Real -->
       <div id="alert-overlay" class="alert-overlay hidden"></div>
+
+      <!-- Landing Page Inicial Hiko (Image 1 y 3) -->
+      <div id="landing-container"></div>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

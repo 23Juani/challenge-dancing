@@ -1,8 +1,7 @@
 /**
  * Shader personalizado GLSL para el mapa de calor de deformacion InSAR: zonas
- * naranjas/rojas pulsantes sobre la ladera, con perimetro punteado en cian.
- * Recibe un conjunto de "hotspots" (centro local x/z, radio, intensidad) y pinta
- * el terreno como un overlay aditivo encima del material base.
+ * con curvas de nivel isotérmicas concéntricas (amarillo -> naranja -> rojo),
+ * núcleo pulsante de máxima deformación y perímetro punteado en cian brillante.
  */
 import * as THREE from 'three';
 
@@ -40,10 +39,14 @@ export function createRiskHeatMaterial() {
       varying vec3 vWorldPos;
 
       vec3 heatColor(float t) {
-        // naranja -> rojo segun intensidad
+        vec3 yellow = vec3(0.98, 0.82, 0.18);
         vec3 orange = vec3(0.976, 0.451, 0.086);
-        vec3 red = vec3(0.937, 0.267, 0.267);
-        return mix(orange, red, t);
+        vec3 red = vec3(0.937, 0.18, 0.18);
+        if (t < 0.5) {
+          return mix(yellow, orange, t * 2.0);
+        } else {
+          return mix(orange, red, (t - 0.5) * 2.0);
+        }
       }
 
       void main() {
@@ -59,21 +62,37 @@ export function createRiskHeatMaterial() {
           float intensity = uHotspotIntensity[i];
           float d = length(p - c);
 
-          float pulse = 0.65 + 0.35 * sin(uTime * 2.0 + float(i) * 1.7);
-          float falloff = smoothstep(r, r * 0.15, d);
-          float a = falloff * intensity * pulse;
-          alpha = max(alpha, a * 0.55);
-          color = mix(color, heatColor(intensity), step(0.001, a));
+          if (d > r * 1.08) continue;
 
-          // Perimetro punteado en cian
-          float edge = smoothstep(r * 1.02, r * 0.98, d) - smoothstep(r * 0.98, r * 0.9, d);
-          float dash = step(0.5, fract(atan(p.y - c.y, p.x - c.x) * 6.0 + uTime));
+          float pulse = 0.75 + 0.25 * sin(uTime * 2.2 + float(i) * 1.5);
+          float falloff = smoothstep(r, r * 0.1, d);
+
+          // Curvas de nivel topográficas concéntricas (isolíneas térmicas InSAR)
+          float contourPattern = abs(fract(d * 0.35 - uTime * 0.08) - 0.5) * 2.0;
+          float isoline = smoothstep(0.15, 0.02, contourPattern) * 0.45;
+
+          float a = (falloff * 0.65 + isoline * 0.35) * intensity * pulse;
+          alpha = max(alpha, a * 0.78);
+
+          vec3 baseHeat = heatColor(falloff * intensity);
+          // Núcleo blanco/amarillo de deformación máxima en el centro
+          float core = smoothstep(r * 0.2, 0.0, d);
+          vec3 layerColor = mix(baseHeat, vec3(1.0, 0.96, 0.8), core * 0.8);
+          layerColor += vec3(1.0, 0.8, 0.2) * isoline;
+
+          color = mix(color, layerColor, step(0.001, a));
+
+          // Perímetro exterior punteado en cian brillante
+          float edge = smoothstep(r * 1.02, r * 0.98, d) - smoothstep(r * 0.98, r * 0.88, d);
+          float angle = atan(p.y - c.y, p.x - c.x);
+          float dash = step(0.45, fract(angle * 5.0 + uTime * 0.5));
           ring = max(ring, edge * dash);
         }
 
-        vec3 cyan = vec3(0.1, 0.9, 0.95);
+        vec3 cyan = vec3(0.14, 0.82, 0.93);
         vec3 finalColor = mix(color, cyan, ring);
-        float finalAlpha = clamp(alpha + ring * 0.9, 0.0, 0.9);
+        float finalAlpha = clamp(alpha + ring * 0.95, 0.0, 0.95);
+
         if (finalAlpha < 0.01) discard;
         gl_FragColor = vec4(finalColor, finalAlpha);
       }

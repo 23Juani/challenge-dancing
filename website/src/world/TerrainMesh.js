@@ -6,6 +6,7 @@
  */
 import * as THREE from 'three';
 import { makeProjector, ELEVATION_SCALE } from './geo.js';
+import { createSatelliteTexture } from './SatelliteTexture.js';
 
 const SIZE = 420; // unidades de escena (lado del plano)
 const SEGMENTS = 220;
@@ -80,10 +81,12 @@ export class TerrainMesh {
     this.geometry = geometry;
     this.baseHeights = baseHeights;
 
+    const satTexture = createSatelliteTexture();
+
     const material = new THREE.MeshStandardMaterial({
-      color: 0x30405a,
-      roughness: 0.95,
-      metalness: 0.05,
+      map: satTexture,
+      roughness: 0.88,
+      metalness: 0.12,
       flatShading: false,
     });
 

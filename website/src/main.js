@@ -8,6 +8,8 @@ import { mountLeftPanel } from './ui/LeftPanel.js';
 import { mountRightPanel } from './ui/RightPanel.js';
 import { mountBottomBar } from './ui/BottomBar.js';
 import { mountAlertOverlay } from './ui/AlertOverlay.js';
+import { mountLandingHero } from './ui/LandingHero.js';
+import { icons } from './ui/icons.js';
 
 const DEFAULT_LAT = -16.5204;
 const DEFAULT_LON = -68.1297;
@@ -19,7 +21,7 @@ async function bootstrap() {
   try {
     config = await api.getConfig();
   } catch (err) {
-    console.warn('No se pudo contactar al backend en /api/v1/config. Verifica que este corriendo.', err);
+    console.warn('No se pudo contactar al backend en /api/v1/config. Verifica que esté corriendo.', err);
   }
 
   const baseLat = config?.base_location?.lat ?? DEFAULT_LAT;
@@ -29,8 +31,13 @@ async function bootstrap() {
 
   store.set({ config });
 
-  const alertOverlay = mountAlertOverlay(document.getElementById('alert-overlay'));
+  // Brújula flotante
+  const compassEl = document.getElementById('viewport-compass');
+  if (compassEl) {
+    compassEl.innerHTML = icons.compass;
+  }
 
+  // Montar HUD de TERRA-SAR
   mountTopBar(document.getElementById('topbar'), store);
   mountLeftPanel(document.getElementById('panel-left'), store, {
     onToggleLayer: (kind, visible) => scene.setLayerVisibility(kind, visible),
@@ -46,8 +53,18 @@ async function bootstrap() {
     onSimulate: () => runSimulation(scene),
   });
 
+  const alertOverlay = mountAlertOverlay(document.getElementById('alert-overlay'));
+
+  // Montar Landing Page Inicial estilo Hiko (Image 1 y 3)
+  mountLandingHero(document.getElementById('landing-container'), {
+    onExplore: () => {
+      scene.flyToOverview();
+    },
+  });
+
   await loadLayersAndZones(scene);
 
+  // Escuchar alertas en tiempo real vía WebSocket
   const socket = new AlertsSocket();
   socket.onMessage((msg) => {
     if (msg.type === 'live_alert') {
@@ -91,7 +108,7 @@ async function refreshZoneAssessments(scene) {
       } catch {
         // continua con las demas zonas
       }
-    }),
+    })
   );
   scene.setZonesWithAssessments(zones, assessmentsByZoneId);
   store.set({ assessmentsByZoneId });
@@ -121,7 +138,7 @@ async function runSimulation(scene) {
     store.set({ selectedAssessment: result.assessment });
     scene.triggerAlertFlash();
   } catch (err) {
-    console.warn('Error ejecutando simulacion', err);
+    console.warn('Error ejecutando simulación', err);
   }
 }
 

@@ -1,30 +1,57 @@
 /**
- * Barra superior: logo, SOLUTION_NAME (puede estar vacio), pestanas, ubicacion con
- * timestamp e indicador de "Sistema Operativo".
+ * Barra superior HUD de TERRA-SAR (Image 2):
+ * - Logo de montaña poligonal + nombre + subtítulo "TERRITORIAL INTELLIGENCE SYSTEM"
+ * - Pestañas con iconos: Overview, Monitoring, Risk Analysis, Simulation, Resource Prioritization
+ * - Widget de ubicación (LA PAZ, BOLIVIA) + timestamp + estado operativo verde + avatar de usuario
  */
 import { SOLUTION_NAME, BASE_LOCATION_LABEL } from '../config.js';
+import { icons } from './icons.js';
 
-const TABS = ['Overview', 'Monitoring', 'Risk Analysis', 'Simulation', 'Resource Prioritization'];
+const TABS = [
+  { id: 'Overview', label: 'Overview', icon: icons.tabOverview },
+  { id: 'Monitoring', label: 'Monitoring', icon: icons.tabMonitoring },
+  { id: 'Risk Analysis', label: 'Risk Analysis', icon: icons.tabRisk },
+  { id: 'Simulation', label: 'Simulation', icon: icons.tabSimulation },
+  { id: 'Resource Prioritization', label: 'Resource Prioritization', icon: icons.tabPrioritization },
+];
 
 export function mountTopBar(container, store) {
+  const brandTitle = SOLUTION_NAME ? escapeHtml(SOLUTION_NAME) : 'TERRA-SAR';
+
   container.innerHTML = `
     <div class="topbar__brand">
-      <div class="topbar__logo"></div>
-      <span class="topbar__solution-name" id="solution-name">${escapeHtml(SOLUTION_NAME)}</span>
+      <div class="topbar__logo">${icons.logoMountain}</div>
+      <div class="topbar__titles">
+        <span class="topbar__solution-name" id="solution-name">${brandTitle}</span>
+        <span class="topbar__tagline">TERRITORIAL INTELLIGENCE SYSTEM</span>
+      </div>
     </div>
+
     <nav class="topbar__tabs" id="topbar-tabs">
       ${TABS.map(
-        (t, i) => `<button class="topbar__tab${i === 0 ? ' is-active' : ''}" data-tab="${t}">${t}</button>`,
+        (t, i) => `
+          <button class="topbar__tab${i === 0 ? ' is-active' : ''}" data-tab="${t.id}">
+            <span class="topbar__tab-icon">${t.icon}</span>
+            <span class="topbar__tab-text">${t.label}</span>
+          </button>
+        `,
       ).join('')}
     </nav>
+
     <div class="topbar__right">
       <div class="topbar__location">
-        <b>${BASE_LOCATION_LABEL}</b><br />
-        <span id="topbar-timestamp"></span>
+        <span class="topbar__location-pin">📍</span>
+        <div class="topbar__location-text">
+          <b>${BASE_LOCATION_LABEL}</b>
+          <span id="topbar-timestamp">Últ. actualización: 14/06/2026 16:32</span>
+        </div>
       </div>
       <div class="topbar__status">
         <span class="status-dot"></span>
         <span id="topbar-status-label">Sistema Operativo</span>
+      </div>
+      <div class="topbar__user" title="Perfil de usuario">
+        ${icons.user}
       </div>
     </div>
   `;
@@ -41,12 +68,9 @@ export function mountTopBar(container, store) {
   const tsEl = container.querySelector('#topbar-timestamp');
   const updateClock = () => {
     const now = new Date();
-    tsEl.textContent = `Ult. actualizacion: ${now.toLocaleString('es-BO', {
+    tsEl.textContent = `Últ. actualización: ${now.toLocaleDateString('es-BO')} ${now.toLocaleTimeString('es-BO', {
       hour: '2-digit',
       minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
     })}`;
   };
   updateClock();
@@ -55,7 +79,8 @@ export function mountTopBar(container, store) {
   const statusLabel = container.querySelector('#topbar-status-label');
   store.subscribe((state) => {
     if (state.config) {
-      statusLabel.textContent = state.config.operational_status === 'operativo' ? 'Sistema Operativo' : 'Degradado';
+      statusLabel.textContent =
+        state.config.operational_status === 'operativo' ? 'Sistema Operativo' : 'Degradado';
     }
   });
 }

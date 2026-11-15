@@ -31,6 +31,7 @@ export class SceneManager {
     this._initScene();
     this._initLights();
     this.terrain = new TerrainMesh({ baseLat, baseLon });
+    this.terrain.applyExaggeration(1.8);
     this.scene.add(this.terrain.mesh);
 
     this.heatMaterial = createRiskHeatMaterial();
@@ -107,6 +108,7 @@ export class SceneManager {
       { name: 'Illimani', lat: this.baseLat - 0.15, lon: this.baseLon + 0.18, elev: 6462 },
       { name: 'El Alto', lat: this.baseLat + 0.09, lon: this.baseLon - 0.02, elev: 4150 },
       { name: 'La Paz', lat: this.baseLat, lon: this.baseLon, elev: 3640 },
+      { name: 'La Paz', lat: this.baseLat - 0.04, lon: this.baseLon + 0.03, elev: 3440 },
     ];
     peaks.forEach((p) => {
       const { x, z } = this.project(p.lat, p.lon);
@@ -163,6 +165,23 @@ export class SceneManager {
     const { x, z } = this.project(zone.center.lat, zone.center.lon);
     const y = this.terrain.heightAt(x, z);
     this.cameraController.controls.target.set(x, y, z);
+  }
+
+  /** Vuelo cinematográfico desde la estratosfera hacia la vista operativa de La Paz */
+  flyToOverview() {
+    const startPos = new THREE.Vector3(260, 240, 320);
+    this.camera.position.copy(startPos);
+    const targetPos = DEFAULT_CAMERA_POS.clone();
+    let progress = 0;
+
+    const animateFly = () => {
+      progress += 0.02;
+      this.camera.position.lerpVectors(startPos, targetPos, THREE.MathUtils.smoothstep(progress, 0, 1));
+      if (progress < 1) {
+        requestAnimationFrame(animateFly);
+      }
+    };
+    animateFly();
   }
 
   setTerrainExaggeration(factor) {
