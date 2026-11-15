@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">SlideGuard Citizen</string>
+
+    <!-- SOLUTION_NAME: variable de marca global (en blanco por defecto). Se expone
+         tambien via BuildConfig.SOLUTION_NAME (app/build.gradle.kts), que es la fuente
+         que usa la UI en runtime. Este recurso queda disponible para XML legacy/vistas
+         nativas que requieran el valor sin tocar Kotlin. -->
+    <string name="solution_name"></string>
+
+    <string name="mode_pedestrian">Modo Peatón</string>
+    <string name="mode_driver">Modo Conductor</string>
+    <string name="server_settings">Configuración de Servidor</string>
+</resources>
