@@ -1,9 +1,10 @@
 /**
- * Panel izquierdo: "CAPAS TERRITORIALES" (Image 2)
- * Lista interactiva de las 9 capas territoriales con iconos SVG dedicados,
- * toggles de visibilidad (ojo) e indicadores de estado cyan/color.
+ * Panel izquierdo: "CAPAS TERRITORIALES" + "TELEMETRÍA NISAR (Dancing with the SARs)"
+ * Lista interactiva con toggles de visibilidad (ojo) e indicadores de estado,
+ * más selector de polarización y coherencia radar de la misión NISAR de la NASA.
  */
 import { icons } from './icons.js';
+import { NISAR_TELEMETRY } from '../world/NisarModes.js';
 
 const LAYER_ICONS = {
   terreno_elevacion: icons.layerTerrain,
@@ -17,17 +18,54 @@ const LAYER_ICONS = {
   escenarios_riesgo: icons.layerScenarios,
 };
 
-export function mountLeftPanel(container, store, { onToggleLayer }) {
+export function mountLeftPanel(container, store, { onToggleLayer, onSelectNisarMode }) {
   container.innerHTML = `
+    <!-- Misión NASA-ISRO NISAR Header (Dancing with the SARs) -->
+    <div class="nisar-badge-box">
+      <div class="nisar-badge-box__title">
+        <span class="nisar-pulse-dot"></span>
+        <span>MISIÓN NASA NISAR · BANDA L</span>
+      </div>
+      <div class="nisar-badge-box__meta">
+        <span>Órbita <b>${NISAR_TELEMETRY.orbit}</b></span>
+        <span>Track <b>${NISAR_TELEMETRY.track}</b></span>
+        <span>Frame <b>${NISAR_TELEMETRY.frame}</b></span>
+      </div>
+      <div class="nisar-modes-pills" id="nisar-modes">
+        ${NISAR_TELEMETRY.modes
+          .map(
+            (m, i) => `
+              <button class="nisar-mode-pill${i === 0 ? ' is-active' : ''}" data-mode="${m.id}" title="${m.desc}">
+                ${m.label.split(' ')[0]}
+              </button>
+            `
+          )
+          .join('')}
+      </div>
+    </div>
+
+    <!-- Capas Territoriales (Image 2) -->
     <div class="panel__header">
       <div class="panel__header-title">
         <span class="panel__header-icon">${icons.tabPrioritization}</span>
         <span>CAPAS TERRITORIALES</span>
       </div>
-      <button class="panel__header-btn" title="Minimizar panel">▲</button>
     </div>
+
     <div id="layer-list" class="layer-list"></div>
   `;
+
+  // Selector de modo NISAR
+  const modesContainer = container.querySelector('#nisar-modes');
+  modesContainer.addEventListener('click', (e) => {
+    const btn = e.target.closest('.nisar-mode-pill');
+    if (!btn) return;
+    modesContainer.querySelectorAll('.nisar-mode-pill').forEach((b) => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    const modeId = btn.dataset.mode;
+    store.set({ activeNisarMode: modeId });
+    if (onSelectNisarMode) onSelectNisarMode(modeId);
+  });
 
   const list = container.querySelector('#layer-list');
 

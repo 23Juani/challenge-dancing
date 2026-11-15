@@ -41,6 +41,9 @@ async function bootstrap() {
   mountTopBar(document.getElementById('topbar'), store);
   mountLeftPanel(document.getElementById('panel-left'), store, {
     onToggleLayer: (kind, visible) => scene.setLayerVisibility(kind, visible),
+    onSelectNisarMode: (modeId) => {
+      scene.triggerAlertFlash();
+    },
   });
   mountRightPanel(document.getElementById('panel-right'), store);
   mountBottomBar(document.getElementById('bottombar'), store, {
@@ -55,11 +58,20 @@ async function bootstrap() {
 
   const alertOverlay = mountAlertOverlay(document.getElementById('alert-overlay'));
 
-  // Montar Landing Page Inicial estilo Hiko (Image 1 y 3)
-  mountLandingHero(document.getElementById('landing-container'), {
+  // Montar Landing Page (accesible vía botón ℹ Misión o toggle)
+  const landing = mountLandingHero(document.getElementById('landing-container'), {
     onExplore: () => {
       scene.flyToOverview();
     },
+  });
+
+  window.addEventListener('toggle-landing', () => {
+    const screen = document.getElementById('landing-screen');
+    if (screen?.classList.contains('is-hidden')) {
+      landing.returnLanding();
+    } else {
+      landing.enterApp();
+    }
   });
 
   await loadLayersAndZones(scene);

@@ -50,11 +50,18 @@ export function mountTopBar(container, store) {
         <span class="status-dot"></span>
         <span id="topbar-status-label">Sistema Operativo</span>
       </div>
+      <button class="topbar__info-btn" id="btn-toggle-info" title="Información del Proyecto y Misión NISAR">
+        ℹ Misión
+      </button>
       <div class="topbar__user" title="Perfil de usuario">
         ${icons.user}
       </div>
     </div>
   `;
+
+  container.querySelector('#btn-toggle-info')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('toggle-landing'));
+  });
 
   const tabsEl = container.querySelector('#topbar-tabs');
   tabsEl.addEventListener('click', (e) => {

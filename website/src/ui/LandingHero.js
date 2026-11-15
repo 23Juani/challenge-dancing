@@ -9,7 +9,7 @@ export function mountLandingHero(container, { onExplore }) {
   const brandName = SOLUTION_NAME ? SOLUTION_NAME : 'Hiko';
 
   container.innerHTML = `
-    <div class="landing-view" id="landing-screen">
+    <div class="landing-view is-hidden" id="landing-screen">
       <!-- Navbar -->
       <header class="landing-nav">
         <div class="landing-nav__brand">${brandName}</div>

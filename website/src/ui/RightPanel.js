@@ -70,11 +70,11 @@ export function mountRightPanel(container, store) {
         <div class="monitor-status__row">
           <span class="monitor-status__icon">🛰</span>
           <span class="monitor-status__label">Satélite:</span>
-          <span class="monitor-status__val cyan-highlight">Activo ✓</span>
+          <span class="monitor-status__val cyan-highlight">NISAR Banda L ✓</span>
         </div>
         <div class="monitor-status__row">
           <span class="monitor-status__icon">↗</span>
-          <span class="monitor-status__label">Desplazamiento reciente:</span>
+          <span class="monitor-status__label">Desplazamiento LOS:</span>
           <span class="monitor-status__val red-highlight" id="rp-disp">↑ 12 mm/mes</span>
         </div>
         <div class="monitor-status__row">
@@ -83,8 +83,18 @@ export function mountRightPanel(container, store) {
           <span class="monitor-status__val cyan-highlight" id="rp-rain">8.4 mm</span>
         </div>
         <div class="monitor-status__row">
+          <span class="monitor-status__icon">🌊</span>
+          <span class="monitor-status__label">Constante Dieléctrica (ε_r):</span>
+          <span class="monitor-status__val red-highlight" id="rp-dielectric">31.4 (Saturado)</span>
+        </div>
+        <div class="monitor-status__row">
+          <span class="monitor-status__icon">📉</span>
+          <span class="monitor-status__label">Coherencia InSAR (γ):</span>
+          <span class="monitor-status__val red-highlight" id="rp-coherence">0.28 (Inestable)</span>
+        </div>
+        <div class="monitor-status__row">
           <span class="monitor-status__icon">📡</span>
-          <span class="monitor-status__label">Estaciones:</span>
+          <span class="monitor-status__label">Estaciones GNSS:</span>
           <span class="monitor-status__val green-highlight">3/3 ✓</span>
         </div>
       </div>
