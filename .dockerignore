@@ -1,0 +1,23 @@
+# Omitir app movil, datasets pesados y directorios no necesarios
+app-movile
+app-movile/**
+data
+data/**
+website
+website/**
+SLIDEGUARD_SOUP
+SLIDEGUARD_SOUP/**
+backend/target
+backend/target/**
+target
+target/**
+.git
+.git/**
+.idea
+.idea/**
+.opencode
+.opencode/**
+*.h5
+*.jpg
+*.jpeg
+*.png

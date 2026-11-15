@@ -11,6 +11,7 @@ import com.slideguard.citizen.domain.model.CitizenAlert
 import com.slideguard.citizen.domain.model.DangerZone
 import com.slideguard.citizen.domain.model.RiskAssessment
 import com.slideguard.citizen.domain.model.RiskLevel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -45,26 +46,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var currentHost: String = ""
     private var currentPort: Int = 0
+    private var liveAlertsJob: Job? = null
 
     init {
         viewModelScope.launch {
-            val host = settings.serverHost.first()
-            val port = settings.serverPort.first()
+            val rawHost = settings.serverHost.first()
+            val rawPort = settings.serverPort.first()
             val driverMode = settings.driverMode.first()
+
+            val parsed = NetworkModule.parseServerAddress(rawHost, rawPort)
             _uiState.value = _uiState.value.copy(
-                serverHost = host,
-                serverPort = port,
+                serverHost = parsed.host,
+                serverPort = parsed.port,
                 driverMode = driverMode,
             )
-            connectTo(host, port)
+            connectTo(parsed.host, parsed.port)
         }
     }
 
     fun updateServer(host: String, port: Int) {
         viewModelScope.launch {
-            settings.setServer(host, port)
-            _uiState.value = _uiState.value.copy(serverHost = host, serverPort = port, loading = true)
-            connectTo(host, port)
+            val parsed = NetworkModule.parseServerAddress(host, port)
+            settings.setServer(parsed.host, parsed.port)
+            _uiState.value = _uiState.value.copy(
+                serverHost = parsed.host,
+                serverPort = parsed.port,
+                loading = true,
+                errorMessage = null,
+            )
+            connectTo(parsed.host, parsed.port)
         }
     }
 
@@ -86,38 +96,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun connectTo(host: String, port: Int) {
-        currentHost = host
-        currentPort = port
+        val parsed = NetworkModule.parseServerAddress(host, port)
+        currentHost = parsed.host
+        currentPort = parsed.port
 
-        val api = NetworkModule.buildApiService(host, port, okHttpClient)
-        val wsUrl = NetworkModule.wsAlertsUrl(host, port)
-        val repository = AlertsRepositoryImpl(api, AlertsWebSocketClient(okHttpClient), wsUrl)
+        liveAlertsJob?.cancel()
 
-        val statusResult = repository.getSystemStatus()
-        val alertsResult = repository.getCitizenAlerts()
-        val zonesResult = repository.getDangerZones()
+        try {
+            val api = NetworkModule.buildApiService(parsed.host, parsed.port, okHttpClient)
+            val wsUrl = NetworkModule.wsAlertsUrl(parsed.host, parsed.port)
+            val repository = AlertsRepositoryImpl(api, AlertsWebSocketClient(okHttpClient), wsUrl)
 
-        val connected = statusResult.isSuccess
-        val overall = alertsResult.getOrNull()?.maxOfOrNull { it.riskLevel } ?: RiskLevel.SEGURO
+            val statusResult = repository.getSystemStatus()
+            val alertsResult = repository.getCitizenAlerts()
+            val zonesResult = repository.getDangerZones()
 
-        _uiState.value = _uiState.value.copy(
-            loading = false,
-            connected = connected,
-            solutionName = statusResult.getOrNull()?.solutionName ?: _uiState.value.solutionName,
-            baseLocationLabel = statusResult.getOrNull()?.baseLocationLabel ?: "",
-            overallRiskLevel = overall,
-            activeAlerts = alertsResult.getOrNull() ?: emptyList(),
-            dangerZones = zonesResult.getOrNull() ?: emptyList(),
-            errorMessage = if (!connected) "No se pudo conectar a $host:$port" else null,
-        )
+            val connected = statusResult.isSuccess
+            val overall = alertsResult.getOrNull()?.maxOfOrNull { it.riskLevel } ?: RiskLevel.SEGURO
 
-        viewModelScope.launch {
-            repository.observeLiveAlerts().collect { assessment ->
-                _uiState.value = _uiState.value.copy(
-                    liveAlert = assessment,
-                    overallRiskLevel = maxRiskLevel(_uiState.value.overallRiskLevel, assessment.riskLevel),
-                )
+            _uiState.value = _uiState.value.copy(
+                loading = false,
+                connected = connected,
+                solutionName = statusResult.getOrNull()?.solutionName ?: _uiState.value.solutionName,
+                baseLocationLabel = statusResult.getOrNull()?.baseLocationLabel ?: "",
+                overallRiskLevel = overall,
+                activeAlerts = alertsResult.getOrNull() ?: emptyList(),
+                dangerZones = zonesResult.getOrNull() ?: emptyList(),
+                errorMessage = if (!connected) "No se pudo conectar al backend (${parsed.host}:${parsed.port})" else null,
+            )
+
+            if (connected) {
+                liveAlertsJob = viewModelScope.launch {
+                    repository.observeLiveAlerts().collect { assessment ->
+                        _uiState.value = _uiState.value.copy(
+                            liveAlert = assessment,
+                            overallRiskLevel = maxRiskLevel(_uiState.value.overallRiskLevel, assessment.riskLevel),
+                        )
+                    }
+                }
             }
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                loading = false,
+                connected = false,
+                errorMessage = "Error de conexión con ${parsed.host}:${parsed.port}: ${e.localizedMessage ?: e.message}",
+            )
         }
     }
 }

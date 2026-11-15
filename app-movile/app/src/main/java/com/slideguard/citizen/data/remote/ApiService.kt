@@ -10,15 +10,15 @@ import retrofit2.http.Path
 /** Contrato REST contra el backend en Rust. La app NUNCA calcula riesgo por su cuenta. */
 interface ApiService {
 
-    @GET("/api/v1/config")
+    @GET("api/v1/config")
     suspend fun getConfig(): SystemConfigDto
 
-    @GET("/api/v1/alerts/citizen")
+    @GET("api/v1/alerts/citizen")
     suspend fun getCitizenAlerts(): CitizenAlertsResponseDto
 
-    @GET("/api/v1/zones")
+    @GET("api/v1/zones")
     suspend fun getZones(): List<ZoneDto>
 
-    @GET("/api/v1/zones/{id}")
+    @GET("api/v1/zones/{id}")
     suspend fun getZoneAssessment(@Path("id") id: String): RiskAssessmentDto
 }

@@ -10,6 +10,8 @@ import com.slideguard.citizen.BuildConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+import com.slideguard.citizen.data.remote.NetworkModule
+
 private val Context.dataStore by preferencesDataStore(name = "slideguard_settings")
 
 /**
@@ -29,18 +31,27 @@ class AppSettings(private val context: Context) {
     val solutionName: String get() = BuildConfig.SOLUTION_NAME
 
     val serverHost: Flow<String> =
-        context.dataStore.data.map { it[Keys.HOST] ?: BuildConfig.DEFAULT_SERVER_HOST }
+        context.dataStore.data.map {
+            val rawHost = it[Keys.HOST] ?: BuildConfig.DEFAULT_SERVER_HOST
+            val rawPort = it[Keys.PORT] ?: BuildConfig.DEFAULT_SERVER_PORT
+            NetworkModule.parseServerAddress(rawHost, rawPort).host
+        }
 
     val serverPort: Flow<Int> =
-        context.dataStore.data.map { it[Keys.PORT] ?: BuildConfig.DEFAULT_SERVER_PORT }
+        context.dataStore.data.map {
+            val rawHost = it[Keys.HOST] ?: BuildConfig.DEFAULT_SERVER_HOST
+            val rawPort = it[Keys.PORT] ?: BuildConfig.DEFAULT_SERVER_PORT
+            NetworkModule.parseServerAddress(rawHost, rawPort).port
+        }
 
     val driverMode: Flow<Boolean> =
         context.dataStore.data.map { it[Keys.DRIVER_MODE] ?: false }
 
     suspend fun setServer(host: String, port: Int) {
+        val parsed = NetworkModule.parseServerAddress(host, port)
         context.dataStore.edit {
-            it[Keys.HOST] = host
-            it[Keys.PORT] = port
+            it[Keys.HOST] = parsed.host
+            it[Keys.PORT] = parsed.port
         }
     }
 

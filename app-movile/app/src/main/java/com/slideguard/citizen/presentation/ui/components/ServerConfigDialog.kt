@@ -14,9 +14,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 
+import com.slideguard.citizen.data.remote.NetworkModule
+
 /**
  * Dialogo rapido para cambiar la IP/Puerto del backend en Rust, facilitando pruebas
  * en red local (IP del laptop del equipo) o en el emulador (`10.0.2.2`) durante la demo.
+ * Acepta URLs completas ("http://127.0.0.1:8080/"), IPs locales o "localhost".
  */
 @Composable
 fun ServerConfigDialog(
@@ -36,7 +39,7 @@ fun ServerConfigDialog(
                 OutlinedTextField(
                     value = host,
                     onValueChange = { host = it },
-                    label = { Text("Host (ej. 10.0.2.2 o IP local)") },
+                    label = { Text("Host (ej. 10.0.2.2 o http://127.0.0.1:8080/)") },
                     singleLine = true,
                 )
                 Spacer(modifier = androidx.compose.ui.Modifier.height(8.dp))
@@ -50,8 +53,9 @@ fun ServerConfigDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                val port = portText.toIntOrNull() ?: currentPort
-                onConfirm(host, port)
+                val inputPort = portText.toIntOrNull() ?: currentPort
+                val parsed = NetworkModule.parseServerAddress(host, inputPort)
+                onConfirm(parsed.host, parsed.port)
             }) {
                 Text("Guardar")
             }
