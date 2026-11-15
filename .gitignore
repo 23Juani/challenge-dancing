@@ -1,0 +1,44 @@
+# === Sistema operativo / editor ===
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# === Rust (backend) ===
+backend/target/
+backend/**/*.rs.bk
+
+# === Node / Vite (website) ===
+website/node_modules/
+website/dist/
+website/.vite/
+*.log
+npm-debug.log*
+
+# === Android / Gradle (app-movile) ===
+app-movile/.gradle/
+app-movile/build/
+app-movile/app/build/
+app-movile/local.properties
+app-movile/.cxx/
+app-movile/captures/
+app-movile/*.iml
+app-movile/.idea/
+
+# === Python (SLIDEGUARD_SOUP, data) ===
+**/__pycache__/
+**/*.pyc
+**/.ipynb_checkpoints/
+SLIDEGUARD_SOUP/models/*
+!SLIDEGUARD_SOUP/models/.gitkeep
+
+# === Datasets pesados ===
+# El HDF5 crudo (~18 GB) excede el limite de GitHub; se mantiene localmente.
+# El filtrado (~39 MB) SI se versiona porque es el dataset de trabajo del reto.
+data/*.h5
+!data/*_landslide_filtered.h5
+
+# Nota: ./data, ./SLIDEGUARD_SOUP (codigo y configuracion) y las imagenes de
+# referencia de la raiz SI se versionan; solo se excluyen artefactos de build,
+# dependencias y el dataset crudo de gran tamano indicados arriba.
