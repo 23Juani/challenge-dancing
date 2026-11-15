@@ -1,0 +1,12 @@
+{
+  "rain_1h_mm": null,
+  "rain_24h_mm": null,
+  "rain_72h_mm": null,
+  "slope_deg": null,
+  "elevation_m": null,
+  "soil_moisture": null,
+  "soil_type": null,
+  "geology": null,
+  "humidity_pct": null,
+  "land_cover": null
+}

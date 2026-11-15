@@ -1,0 +1,14 @@
+{
+  "calibrated": false,
+  "notes": "Completar solamente después de validar con datos locales y con personal competente. No usar umbrales arbitrarios para alertas operativas.",
+  "rainfall_next_6h_mm": {
+    "yellow": null,
+    "orange": null,
+    "red": null
+  },
+  "landslide_probability": {
+    "yellow": null,
+    "orange": null,
+    "red": null
+  }
+}

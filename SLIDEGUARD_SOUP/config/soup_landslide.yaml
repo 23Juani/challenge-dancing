@@ -1,0 +1,25 @@
+# Clasificador de riesgo para registros ambientales expresados como texto.
+# Soup sequence classifier: documentación en docs/training.md del repo Soup.
+base: intfloat/multilingual-e5-small
+task: classifier
+modality: text
+backend: transformers
+
+data:
+  train: ./data/processed/landslide_soup.jsonl
+  val_split: 0.2
+  max_length: 256
+
+training:
+  num_labels: 2
+  classifier_kind: single_label
+  label_names: [no_event_24h, event_24h]
+  epochs: 5
+  lr: 2.0e-5
+  batch_size: 8
+  seed: 42
+  lora:
+    r: 8
+    alpha: 16
+
+output: ./models/soup_landslide
