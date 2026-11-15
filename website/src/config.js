@@ -9,4 +9,4 @@ export const SOLUTION_NAME = import.meta.env.VITE_SOLUTION_NAME ?? '';
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 export const WS_ALERTS_URL = import.meta.env.VITE_WS_ALERTS_URL ?? 'ws://localhost:8080/ws/alerts';
 
-export const BASE_LOCATION_LABEL = 'LA PAZ, BOLIVIA';
+export const BASE_LOCATION_LABEL = 'DEPTO. DE LA PAZ, BOLIVIA';

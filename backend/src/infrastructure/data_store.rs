@@ -124,7 +124,7 @@ fn zone_specs() -> Vec<ZoneSpec> {
     vec![
         ZoneSpec {
             id: "zona-piloto-cotahuma",
-            name: "Zona de Monitoreo Piloto - Cotahuma",
+            name: "Cotahuma / Laderas Oeste (La Paz Centro)",
             offset_lat: 0.012,
             offset_lon: -0.015,
             elevation_m: 3760.0,
@@ -133,54 +133,94 @@ fn zone_specs() -> Vec<ZoneSpec> {
             land_cover: "Urbano denso en ladera",
         },
         ZoneSpec {
-            id: "zona-max-paredo",
-            name: "Max Paredo / Periferica",
-            offset_lat: 0.03,
-            offset_lon: 0.01,
-            elevation_m: 3920.0,
-            slope_deg: 27.0,
-            geology: "Lutitas y limos fracturados",
-            land_cover: "Urbano disperso",
+            id: "zona-yungas-undavi-coroico",
+            name: "Yungas - Coroico / Unduavi (Ruta Nor Yungas)",
+            offset_lat: 0.33,
+            offset_lon: 0.40,
+            elevation_m: 1750.0,
+            slope_deg: 44.0,
+            geology: "Pizarras y esquistos meteorizados",
+            land_cover: "Selva nublada / Talud vial",
         },
         ZoneSpec {
-            id: "zona-el-alto-sur",
-            name: "El Alto Sur - Ceja",
-            offset_lat: 0.09,
+            id: "zona-yungas-caranavi",
+            name: "Yungas - Caranavi / Serranias de Guanay",
+            offset_lat: 0.70,
+            offset_lon: 0.56,
+            elevation_m: 970.0,
+            slope_deg: 39.0,
+            geology: "Lutitas alteradas y suelos tropicales",
+            land_cover: "Bosque tropical humedo / Carretera",
+        },
+        ZoneSpec {
+            id: "zona-cordillera-huayna-potosi",
+            name: "Cordillera Real - Huayna Potosi / Zongo",
+            offset_lat: 0.25,
             offset_lon: -0.02,
-            elevation_m: 4150.0,
-            slope_deg: 14.0,
-            geology: "Terrazas aluviales",
-            land_cover: "Urbano / Infraestructura vial",
+            elevation_m: 4850.0,
+            slope_deg: 42.0,
+            geology: "Granodiorita fracturada y morrenas",
+            land_cover: "Glaciar / Alta montana",
         },
         ZoneSpec {
-            id: "zona-irpavi",
-            name: "Irpavi - Achumani",
+            id: "zona-titicaca-copacabana",
+            name: "Lago Titicaca - Copacabana / Estrecho de Tiquina",
+            offset_lat: 0.36,
+            offset_lon: -0.95,
+            elevation_m: 3840.0,
+            slope_deg: 22.0,
+            geology: "Calizas y areniscas estratificadas",
+            land_cover: "Ribera lacustre / Terrazas",
+        },
+        ZoneSpec {
+            id: "zona-el-alto-ceja",
+            name: "El Alto - Ceja / Borde Altiplano",
+            offset_lat: 0.01,
+            offset_lon: -0.03,
+            elevation_m: 4150.0,
+            slope_deg: 28.0,
+            geology: "Gravas y limos aluviales inconsolidados",
+            land_cover: "Urbano / Corredor de transporte",
+        },
+        ZoneSpec {
+            id: "zona-irpavi-achumani",
+            name: "Zona Sur - Irpavi / Achumani",
             offset_lat: -0.04,
             offset_lon: 0.03,
             elevation_m: 3440.0,
-            slope_deg: 22.0,
+            slope_deg: 24.0,
             geology: "Conglomerados La Paz",
-            land_cover: "Residencial / Vegetacion",
+            land_cover: "Residencial / Quebradas activas",
         },
         ZoneSpec {
             id: "zona-valle-de-la-luna",
-            name: "Valle de la Luna - Mallasa",
+            name: "Rio Abajo - Valle de la Luna / Mallasa",
             offset_lat: -0.08,
             offset_lon: 0.04,
             elevation_m: 3200.0,
             slope_deg: 38.0,
-            geology: "Formaciones de erosion (badlands)",
-            land_cover: "Suelo desnudo / Turistico",
+            geology: "Formaciones de erosion arcillosas (badlands)",
+            land_cover: "Suelo desnudo / Falla erosiva",
         },
         ZoneSpec {
-            id: "zona-illimani-base",
-            name: "Base Illimani - Palca",
+            id: "zona-illimani-palca",
+            name: "Cordillera Real - Illimani / Cuenca de Palca",
             offset_lat: -0.15,
             offset_lon: 0.18,
             elevation_m: 4600.0,
             slope_deg: 41.0,
             geology: "Roca metamorfica fracturada",
-            land_cover: "Glaciar / Roca expuesta",
+            land_cover: "Conos de deyeccion / Roca expuesta",
+        },
+        ZoneSpec {
+            id: "zona-norte-apolo",
+            name: "Norte de La Paz - Apolo / Parque Madidi",
+            offset_lat: 1.80,
+            offset_lon: -0.29,
+            elevation_m: 1450.0,
+            slope_deg: 35.0,
+            geology: "Areniscas y arcilitas meteorizadas",
+            land_cover: "Selva pre-amazonica / Talud inestable",
         },
     ]
 }
@@ -225,13 +265,17 @@ fn polygon_around(center: GeoPoint, radius_deg: f64, rng: &mut StdRng) -> Vec<Ge
 fn build_layers(rng: &mut StdRng, zones: &[Zone]) -> HashMap<LayerKind, Layer> {
     let mut map = HashMap::new();
 
-    // Terreno y Elevacion: puntos de malla con elevaciones de referencia (La Paz, El Alto, Illimani).
+    // Terreno y Elevacion: puntos de malla con elevaciones de referencia de todo el Departamento de La Paz.
     let terrain_points = vec![
         ("Illimani", BASE_LAT - 0.15, BASE_LON + 0.18, 6462.0),
-        ("El Alto", BASE_LAT + 0.09, BASE_LON - 0.02, 4150.0),
+        ("Huayna Potosi", BASE_LAT + 0.25, BASE_LON - 0.02, 6088.0),
+        ("Lago Titicaca", BASE_LAT + 0.36, BASE_LON - 0.95, 3812.0),
+        ("Coroico - Yungas", BASE_LAT + 0.33, BASE_LON + 0.40, 1750.0),
+        ("Caranavi", BASE_LAT + 0.70, BASE_LON + 0.56, 970.0),
+        ("El Alto - Altiplano", BASE_LAT + 0.01, BASE_LON - 0.03, 4150.0),
         ("La Paz Centro", BASE_LAT, BASE_LON, 3640.0),
-        ("Irpavi", BASE_LAT - 0.04, BASE_LON + 0.03, 3440.0),
         ("Valle de la Luna", BASE_LAT - 0.08, BASE_LON + 0.04, 3200.0),
+        ("Apolo - Madidi", BASE_LAT + 1.80, BASE_LON - 0.29, 1450.0),
     ];
     map.insert(
         LayerKind::TerrenoElevacion,
@@ -377,18 +421,19 @@ fn build_layers(rng: &mut StdRng, zones: &[Zone]) -> HashMap<LayerKind, Layer> {
         },
     );
 
-    // Infraestructura Urbana: vias principales (simplificadas) de La Paz/El Alto.
+    // Infraestructura Urbana: vias principales del Departamento de La Paz.
     map.insert(
         LayerKind::InfraestructuraUrbana,
         Layer {
             kind: LayerKind::InfraestructuraUrbana,
             label: LayerKind::InfraestructuraUrbana.label_es().to_string(),
             color: LayerKind::InfraestructuraUrbana.color_hex().to_string(),
-            source: "Red vial de referencia simplificada".into(),
+            source: "Red vial departamental La Paz".into(),
             features: vec![
-                road_feature("Av. Periferica", BASE_LAT + 0.02, BASE_LON - 0.01),
+                road_feature("Ruta 3: La Paz - Coroico (Yungas)", BASE_LAT + 0.20, BASE_LON + 0.25),
                 road_feature("Autopista La Paz - El Alto", BASE_LAT + 0.05, BASE_LON - 0.015),
-                road_feature("Av. Costanera", BASE_LAT - 0.02, BASE_LON + 0.01),
+                road_feature("Ruta 2: La Paz - Copacabana (Titicaca)", BASE_LAT + 0.25, BASE_LON - 0.50),
+                road_feature("Av. Costanera / Zona Sur", BASE_LAT - 0.02, BASE_LON + 0.01),
             ],
         },
     );
@@ -455,10 +500,10 @@ fn road_feature(name: &str, lat: f64, lon: f64) -> LayerFeature {
 }
 
 fn susceptibility_index(geology: &str, slope_deg: f64) -> f64 {
-    let geology_factor = if geology.contains("coluvial") {
-        0.9
-    } else if geology.contains("erosion") {
-        0.85
+    let geology_factor = if geology.contains("coluvial") || geology.contains("Pizarras") || geology.contains("esquistos") {
+        0.95
+    } else if geology.contains("erosion") || geology.contains("Lutitas") {
+        0.88
     } else if geology.contains("fractur") {
         0.75
     } else if geology.contains("Conglomerados") {

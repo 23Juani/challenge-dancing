@@ -65,6 +65,10 @@ async function bootstrap() {
     },
   });
 
+  window.addEventListener('theme-changed', (e) => {
+    scene.setTheme(e.detail.theme);
+  });
+
   window.addEventListener('toggle-landing', () => {
     const screen = document.getElementById('landing-screen');
     if (screen?.classList.contains('is-hidden')) {

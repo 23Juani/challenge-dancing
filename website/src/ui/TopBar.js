@@ -50,6 +50,9 @@ export function mountTopBar(container, store) {
         <span class="status-dot"></span>
         <span id="topbar-status-label">Sistema Operativo</span>
       </div>
+      <button class="topbar__theme-btn" id="btn-toggle-theme" title="Alternar Modo Claro / Oscuro">
+        ☀️ Modo Claro
+      </button>
       <button class="topbar__info-btn" id="btn-toggle-info" title="Información del Proyecto y Misión NISAR">
         ℹ Misión
       </button>
@@ -58,6 +61,15 @@ export function mountTopBar(container, store) {
       </div>
     </div>
   `;
+
+  const themeBtn = container.querySelector('#btn-toggle-theme');
+  themeBtn?.addEventListener('click', () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const nextTheme = isLight ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    themeBtn.textContent = isLight ? '☀️ Modo Claro' : '🌙 Modo Oscuro';
+    window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: nextTheme } }));
+  });
 
   container.querySelector('#btn-toggle-info')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('toggle-landing'));

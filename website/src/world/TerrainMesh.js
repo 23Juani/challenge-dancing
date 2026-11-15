@@ -1,15 +1,17 @@
 /**
- * Malla de elevacion procedural, estilizada sobre la topografia de La Paz / El Alto /
- * Illimani: cuenca urbana deprimida (La Paz), meseta elevada al norte (El Alto) y un
- * pico prominente al sureste (Illimani, 6462 m). No sustituye un DEM real; sirve como
- * base navegable y fluida para la demo (ver backend/README.md sobre el origen de datos).
+ * Malla de elevación procedural del DEPARTAMENTO DE LA PAZ completo:
+ * - Lago Titicaca en el Noroeste (gran depresión lacustre plana)
+ * - Cordillera Real: Cadena montañosa continua con Huayna Potosí (6.088 m) e Illimani (6.462 m)
+ * - Altiplano: Meseta elevada al Oeste (El Alto ~4.150 m)
+ * - Cuenca urbana de La Paz (depresión central ~3.600 m)
+ * - Los Yungas y Piedemonte: Descenso abrupto oriental hacia selva y valles húmedos (~1.500 - 900 m)
  */
 import * as THREE from 'three';
 import { makeProjector, ELEVATION_SCALE } from './geo.js';
 import { createSatelliteTexture } from './SatelliteTexture.js';
 
-const SIZE = 420; // unidades de escena (lado del plano)
-const SEGMENTS = 220;
+const SIZE = 620; // Extensión amplia para todo el Departamento de La Paz
+const SEGMENTS = 260;
 
 function valueNoise(x, z, seed = 1) {
   const s = Math.sin(x * 12.9898 * seed + z * 78.233 * seed) * 43758.5453;
@@ -38,7 +40,7 @@ function fractalNoise(x, z) {
   let freq = 1;
   let maxAmp = 0;
   for (let o = 0; o < 4; o++) {
-    total += smoothNoise(x * freq, z * freq, 60, o + 1) * amp;
+    total += smoothNoise(x * freq, z * freq, 80, o + 1) * amp;
     maxAmp += amp;
     amp *= 0.5;
     freq *= 2;
@@ -56,26 +58,40 @@ export class TerrainMesh {
     const posAttr = geometry.attributes.position;
     const baseHeights = new Float32Array(posAttr.count);
 
-    // Illimani proyectado a coordenadas locales (pico prominente)
+    // Hitos departamentales proyectados a coordenadas locales
     const illimani = this.project(-16.5204 - 0.15, -68.1297 + 0.18);
+    const huaynaPotosi = this.project(-16.5204 + 0.25, -68.1297 - 0.02);
+    const titicaca = this.project(-16.5204 + 0.36, -68.1297 - 0.95);
+    const yungas = this.project(-16.5204 + 0.35, -68.1297 + 0.45);
 
     for (let i = 0; i < posAttr.count; i++) {
       const x = posAttr.getX(i);
       const z = posAttr.getZ(i);
 
-      // Meseta de El Alto: mas elevada hacia +z (norte en nuestra convencion local)
-      const altiplanoPlateau = THREE.MathUtils.smoothstep(z, -10, 60) * 14;
+      // 1. Altiplano: Meseta base (~4.000 m) al oeste
+      const altiplano = THREE.MathUtils.smoothstep(-x, -30, 180) * 16;
 
-      // Cuenca de La Paz: depresion central
-      const basinDepth = -Math.exp(-((x * x) / 6000 + (z * z) / 9000)) * 22;
+      // 2. Cuenca de La Paz: Cañón central excavado
+      const basinDepth = -Math.exp(-((x * x) / 5000 + (z * z) / 8000)) * 26;
 
-      // Pico de Illimani
+      // 3. Cordillera Real: Cadena continua con Illimani y Huayna Potosí
       const dIllimani = Math.hypot(x - illimani.x, z - illimani.z);
-      const illimaniPeak = Math.exp(-(dIllimani * dIllimani) / 900) * 70;
+      const illimaniPeak = Math.exp(-(dIllimani * dIllimani) / 1200) * 75;
 
-      const noise = (fractalNoise(x, z) - 0.5) * 6;
+      const dHp = Math.hypot(x - huaynaPotosi.x, z - huaynaPotosi.z);
+      const hpPeak = Math.exp(-(dHp * dHp) / 1100) * 68;
 
-      baseHeights[i] = altiplanoPlateau + basinDepth + illimaniPeak + noise + 6;
+      // 4. Lago Titicaca: Espejo de agua plano deprimido al noroeste
+      const dTiticaca = Math.hypot(x - titicaca.x, z - titicaca.z);
+      const titicacaBasin = -Math.exp(-(dTiticaca * dTiticaca) / 9000) * 18;
+
+      // 5. Los Yungas: Fuerte caída oriental hacia los valles tropicales y Caranavi
+      const dYungas = Math.hypot(x - yungas.x, z - yungas.z);
+      const yungasDrop = -Math.exp(-(dYungas * dYungas) / 12000) * 32;
+
+      const noise = (fractalNoise(x, z) - 0.5) * 8;
+
+      baseHeights[i] = altiplano + basinDepth + illimaniPeak + hpPeak + titicacaBasin + yungasDrop + noise + 8;
     }
 
     this.geometry = geometry;
@@ -95,7 +111,7 @@ export class TerrainMesh {
     this.mesh.castShadow = false;
 
     this.heatOverlayGeometry = geometry.clone();
-    this.applyExaggeration(1.0);
+    this.applyExaggeration(1.8);
   }
 
   /** Aplica la exageracion vertical (1.0x a 3.0x) deformando la escala Y en tiempo real. */
@@ -107,7 +123,6 @@ export class TerrainMesh {
     posAttr.needsUpdate = true;
     this.geometry.computeVertexNormals();
 
-    // Mantiene el overlay de calor pegado a la superficie del terreno.
     const heatPos = this.heatOverlayGeometry.attributes.position;
     for (let i = 0; i < heatPos.count; i++) {
       heatPos.setY(i, posAttr.getY(i) + 0.4);
@@ -117,11 +132,10 @@ export class TerrainMesh {
   }
 
   heightAt(x, z) {
-    // Aproximacion rapida: busca el vertice mas cercano (suficiente para marcadores).
     const posAttr = this.geometry.attributes.position;
     let best = 0;
     let bestD = Infinity;
-    const step = 7; // muestreo disperso para rendimiento
+    const step = 9;
     for (let i = 0; i < posAttr.count; i += step) {
       const vx = posAttr.getX(i);
       const vz = posAttr.getZ(i);

@@ -85,30 +85,62 @@ export class SceneManager {
   _initLights() {
     const hemi = new THREE.HemisphereLight(0x8fb4ff, 0x0d1424, 0.65);
     this.scene.add(hemi);
+    this.hemiLight = hemi;
 
     const sun = new THREE.DirectionalLight(0xffe9c4, 1.35);
     sun.position.set(120, 180, 60);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.left = -200;
-    sun.shadow.camera.right = 200;
-    sun.shadow.camera.top = 200;
-    sun.shadow.camera.bottom = -200;
-    sun.shadow.camera.far = 600;
+    sun.shadow.camera.left = -300;
+    sun.shadow.camera.right = 300;
+    sun.shadow.camera.top = 300;
+    sun.shadow.camera.bottom = -300;
+    sun.shadow.camera.far = 1200;
     this.scene.add(sun);
     this.sunLight = sun;
 
     const rim = new THREE.DirectionalLight(0x3fd0ff, 0.25);
     rim.position.set(-100, 60, -120);
     this.scene.add(rim);
+    this.rimLight = rim;
+  }
+
+  /** Alterna entre iluminación de Modo Claro (Google Earth diurno) y Modo Oscuro */
+  setTheme(theme) {
+    if (theme === 'light') {
+      this.scene.background.set(0xd2e5f8);
+      this.scene.fog.color.set(0xd2e5f8);
+      this.scene.fog.density = 0.0011;
+      this.sunLight.color.set(0xfff5e6);
+      this.sunLight.intensity = 1.85;
+      this.hemiLight.color.set(0xdbeefc);
+      this.hemiLight.groundColor.set(0x8a765e);
+      this.hemiLight.intensity = 0.95;
+      this.rimLight.intensity = 0.15;
+    } else {
+      this.scene.background.set(0x070b14);
+      this.scene.fog.color.set(0x0a1222);
+      this.scene.fog.density = 0.0022;
+      this.sunLight.color.set(0xffe9c4);
+      this.sunLight.intensity = 1.35;
+      this.hemiLight.color.set(0x8fb4ff);
+      this.hemiLight.groundColor.set(0x0d1424);
+      this.hemiLight.intensity = 0.65;
+      this.rimLight.intensity = 0.25;
+    }
   }
 
   _addPeakLabels() {
     const peaks = [
       { name: 'Illimani', lat: this.baseLat - 0.15, lon: this.baseLon + 0.18, elev: 6462 },
-      { name: 'El Alto', lat: this.baseLat + 0.09, lon: this.baseLon - 0.02, elev: 4150 },
-      { name: 'La Paz', lat: this.baseLat, lon: this.baseLon, elev: 3640 },
-      { name: 'La Paz', lat: this.baseLat - 0.04, lon: this.baseLon + 0.03, elev: 3440 },
+      { name: 'Huayna Potosí', lat: this.baseLat + 0.25, lon: this.baseLon - 0.02, elev: 6088 },
+      { name: 'Lago Titicaca', lat: this.baseLat + 0.36, lon: this.baseLon - 0.95, elev: 3812 },
+      { name: 'Coroico - Yungas', lat: this.baseLat + 0.33, lon: this.baseLon + 0.40, elev: 1750 },
+      { name: 'Caranavi', lat: this.baseLat + 0.70, lon: this.baseLon + 0.56, elev: 970 },
+      { name: 'El Alto', lat: this.baseLat + 0.01, lon: this.baseLon - 0.03, elev: 4150 },
+      { name: 'La Paz Centro', lat: this.baseLat, lon: this.baseLon, elev: 3640 },
+      { name: 'Valle de la Luna', lat: this.baseLat - 0.08, lon: this.baseLon + 0.04, elev: 3200 },
+      { name: 'Apolo - Madidi', lat: this.baseLat + 1.80, lon: this.baseLon - 0.29, elev: 1450 },
     ];
     peaks.forEach((p) => {
       const { x, z } = this.project(p.lat, p.lon);

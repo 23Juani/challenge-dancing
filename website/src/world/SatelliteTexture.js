@@ -1,6 +1,11 @@
 /**
  * Generador procedural de textura ortofoto satelital de alta resolución (2048x2048),
- * reproduciendo el aspecto satelital de La Paz, El Alto y la cumbre nevada del Illimani.
+ * cubriendo la diversidad geográfica completa del Departamento de La Paz:
+ * - Lago Titicaca (aguas azul zafiro/turquesa en el Noroeste)
+ * - Cordillera Real (cresta continua de cumbres nevadas: Illimani, Huayna Potosí)
+ * - Altiplano (estepa ocre/dorada al Oeste)
+ * - Cuenca urbana de La Paz (fondo de valle en el Centro)
+ * - Los Yungas y Piedemonte Amazónico (bosques verde esmeralda al Este)
  */
 import * as THREE from 'three';
 
@@ -11,57 +16,78 @@ export function createSatelliteTexture() {
   canvas.height = size;
   const ctx = canvas.getContext('2d');
 
-  // 1. Base topográfica general: tonos tierra andinos, laderas ocres y sombras
-  const bgGrad = ctx.createLinearGradient(0, 0, size, size);
-  bgGrad.addColorStop(0, '#3a3228'); // Ladera árida alta
-  bgGrad.addColorStop(0.3, '#5c4e3c'); // Ocre andino
-  bgGrad.addColorStop(0.5, '#423b32'); // Valle medio
-  bgGrad.addColorStop(0.7, '#6b5842'); // Talud rocoso
-  bgGrad.addColorStop(1, '#2c251e');
+  // 1. Base topográfica general: transición Altiplano árido -> Cordillera -> Valles -> Selva
+  const bgGrad = ctx.createLinearGradient(0, size, size, 0);
+  bgGrad.addColorStop(0, '#5a4c38'); // Altiplano sur
+  bgGrad.addColorStop(0.35, '#483f34'); // Piedemonte andino
+  bgGrad.addColorStop(0.55, '#3b4731'); // Valles interandinos
+  bgGrad.addColorStop(0.8, '#244820'); // Yungas / bosque húmedo
+  bgGrad.addColorStop(1, '#1b3a16'); // Amazonía norte
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, size, size);
 
-  // 2. Ruido geológico de alta frecuencia (rocas, erosión, estrías)
+  // 2. Ruido geológico de alta frecuencia
   const imgData = ctx.getImageData(0, 0, size, size);
   const data = imgData.data;
-  let seed = 12345;
+  let seed = 20261114;
   const rnd = () => {
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
   };
 
   for (let i = 0; i < data.length; i += 4) {
-    const grain = (rnd() - 0.5) * 35;
+    const grain = (rnd() - 0.5) * 32;
     data[i] = Math.min(255, Math.max(0, data[i] + grain));
-    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + grain * 0.9));
-    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + grain * 0.7));
+    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + grain * 0.95));
+    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + grain * 0.8));
   }
   ctx.putImageData(imgData, 0, 0);
 
-  // 3. Cuenca urbana de La Paz (cuadrícula densa en el centro y fondo de cuenca)
+  // 3. Lago Titicaca (Noroeste: ~x: 0-35%, y: 0-38%)
+  ctx.save();
+  const lakeGrad = ctx.createRadialGradient(size * 0.16, size * 0.22, 10, size * 0.16, size * 0.22, size * 0.26);
+  lakeGrad.addColorStop(0, '#0c3558'); // Azul profundo Titicaca
+  lakeGrad.addColorStop(0.65, '#124c7a');
+  lakeGrad.addColorStop(0.88, '#1e729a'); // Aguas ribereñas turquesa
+  lakeGrad.addColorStop(0.96, '#a89462'); // Ribera arenosa
+  lakeGrad.addColorStop(1, 'rgba(168, 148, 98, 0)');
+  ctx.fillStyle = lakeGrad;
+  ctx.beginPath();
+  ctx.ellipse(size * 0.18, size * 0.22, size * 0.22, size * 0.16, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 4. Los Yungas y Caranavi (Franja oriental verde esmeralda de selva tropical)
+  ctx.save();
+  const yungasGrad = ctx.createRadialGradient(size * 0.82, size * 0.45, 20, size * 0.82, size * 0.45, size * 0.35);
+  yungasGrad.addColorStop(0, 'rgba(28, 77, 34, 0.85)'); // Verde selva densa
+  yungasGrad.addColorStop(0.5, 'rgba(40, 94, 46, 0.65)');
+  yungasGrad.addColorStop(1, 'rgba(40, 94, 46, 0)');
+  ctx.fillStyle = yungasGrad;
+  ctx.beginPath();
+  ctx.ellipse(size * 0.82, size * 0.45, size * 0.32, size * 0.42, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 5. Cuenca urbana de La Paz y El Alto (Centro)
   ctx.save();
   const cityCenterX = size * 0.48;
   const cityCenterY = size * 0.58;
-  const cityRadius = size * 0.28;
+  const cityRadius = size * 0.18;
 
-  const cityMask = ctx.createRadialGradient(
-    cityCenterX,
-    cityCenterY,
-    10,
-    cityCenterX,
-    cityCenterY,
-    cityRadius
-  );
-  cityMask.addColorStop(0, 'rgba(150, 140, 130, 0.85)');
-  cityMask.addColorStop(0.6, 'rgba(120, 110, 100, 0.6)');
+  const cityMask = ctx.createRadialGradient(cityCenterX, cityCenterY, 5, cityCenterX, cityCenterY, cityRadius);
+  cityMask.addColorStop(0, 'rgba(152, 142, 132, 0.9)');
+  cityMask.addColorStop(0.7, 'rgba(128, 118, 108, 0.65)');
   cityMask.addColorStop(1, 'rgba(100, 90, 80, 0)');
   ctx.fillStyle = cityMask;
-  ctx.fillRect(0, 0, size, size);
+  ctx.beginPath();
+  ctx.arc(cityCenterX, cityCenterY, cityRadius, 0, Math.PI * 2);
+  ctx.fill();
 
-  // Cuadrícula urbana estilizada
-  ctx.strokeStyle = 'rgba(70, 65, 60, 0.35)';
-  ctx.lineWidth = 1.5;
-  const step = 8;
+  // Malla vial y cuadrícula urbana
+  ctx.strokeStyle = 'rgba(75, 70, 65, 0.38)';
+  ctx.lineWidth = 1.4;
+  const step = 9;
   ctx.beginPath();
   for (let x = cityCenterX - cityRadius; x < cityCenterX + cityRadius; x += step) {
     ctx.moveTo(x, cityCenterY - cityRadius * 0.7);
@@ -74,18 +100,32 @@ export function createSatelliteTexture() {
   ctx.stroke();
   ctx.restore();
 
-  // 4. Glaciar y cumbre nevada del Illimani (extremo superior derecho)
+  // 6. Cordillera Real: Cresta continua con Illimani (sureste) y Huayna Potosí (norte)
+  // Glaciar Huayna Potosí
   ctx.save();
-  const peakX = size * 0.78;
-  const peakY = size * 0.22;
-  const snowGrad = ctx.createRadialGradient(peakX, peakY, 5, peakX, peakY, size * 0.18);
-  snowGrad.addColorStop(0, '#ffffff');
-  snowGrad.addColorStop(0.35, '#f0f9ff');
-  snowGrad.addColorStop(0.7, '#bae6fd');
-  snowGrad.addColorStop(1, 'rgba(186, 230, 253, 0)');
-  ctx.fillStyle = snowGrad;
+  const hpX = size * 0.49;
+  const hpY = size * 0.34;
+  const hpGrad = ctx.createRadialGradient(hpX, hpY, 2, hpX, hpY, size * 0.08);
+  hpGrad.addColorStop(0, '#ffffff');
+  hpGrad.addColorStop(0.5, '#e0f2fe');
+  hpGrad.addColorStop(0.85, '#bae6fd');
+  hpGrad.addColorStop(1, 'rgba(186, 230, 253, 0)');
+  ctx.fillStyle = hpGrad;
   ctx.beginPath();
-  ctx.arc(peakX, peakY, size * 0.18, 0, Math.PI * 2);
+  ctx.arc(hpX, hpY, size * 0.08, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Glaciar Illimani
+  const illiX = size * 0.68;
+  const illiY = size * 0.64;
+  const illiGrad = ctx.createRadialGradient(illiX, illiY, 4, illiX, illiY, size * 0.12);
+  illiGrad.addColorStop(0, '#ffffff');
+  illiGrad.addColorStop(0.45, '#e0f2fe');
+  illiGrad.addColorStop(0.8, '#bae6fd');
+  illiGrad.addColorStop(1, 'rgba(186, 230, 253, 0)');
+  ctx.fillStyle = illiGrad;
+  ctx.beginPath();
+  ctx.arc(illiX, illiY, size * 0.12, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
