@@ -11,7 +11,7 @@ use crate::application::services::AppState;
 
 use super::handlers::{
     get_citizen_alerts, get_config, get_layers, get_zone_by_id, get_zones, health,
-    post_ingest_live, post_predict, post_simulate,
+    post_ingest_live, post_predict, post_simulate, root_index,
 };
 use super::ws::ws_alerts_handler;
 
@@ -22,6 +22,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .allow_headers(Any);
 
     Router::new()
+        .route("/", get(root_index))
         .route("/health", get(health))
         .route("/api/v1/config", get(get_config))
         .route("/api/v1/layers", get(get_layers))

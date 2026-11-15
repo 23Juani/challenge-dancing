@@ -74,3 +74,23 @@ pub async fn post_ingest_live(
 pub async fn health() -> &'static str {
     "ok"
 }
+
+pub async fn root_index(State(state): State<SharedState>) -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "service": "slideguard-backend",
+        "solution_name": state.config.solution_name,
+        "status": "operativo",
+        "endpoints": {
+            "health": "/health",
+            "config": "/api/v1/config",
+            "layers": "/api/v1/layers",
+            "zones": "/api/v1/zones",
+            "predict": "POST /api/v1/predict",
+            "simulate": "POST /api/v1/simulate",
+            "citizen_alerts": "/api/v1/alerts/citizen",
+            "live_ingest_http": state.config.live_ingest_http_path,
+            "live_ingest_tcp_port": state.config.live_ingest_tcp_port,
+            "ws_alerts": state.config.ws_alerts_path,
+        }
+    }))
+}
