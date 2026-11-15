@@ -111,12 +111,30 @@ export class TerrainMesh {
     this.mesh.castShadow = false;
 
     this.heatOverlayGeometry = geometry.clone();
+    this.currentExaggeration = 1.8;
+    this.reliefMorph = 1.0;
     this.applyExaggeration(1.8);
+  }
+
+  /**
+   * Controla la transición de Mapa Plano 2D (morph = 0.0) a Google Earth 3D (morph = 1.0).
+   * Cuando morph es 0, toda la superficie es plana como un mapa satelital cenital.
+   */
+  setReliefMorph(morphFactor) {
+    this.reliefMorph = THREE.MathUtils.clamp(morphFactor, 0.0, 1.0);
+    this._updateHeights();
   }
 
   /** Aplica la exageracion vertical (1.0x a 3.0x) deformando la escala Y en tiempo real. */
   applyExaggeration(factor) {
+    this.currentExaggeration = factor;
+    this._updateHeights();
+  }
+
+  _updateHeights() {
     const posAttr = this.geometry.attributes.position;
+    const factor = this.currentExaggeration * this.reliefMorph;
+
     for (let i = 0; i < posAttr.count; i++) {
       posAttr.setY(i, this.baseHeights[i] * ELEVATION_SCALE * 40 * factor);
     }
@@ -125,7 +143,7 @@ export class TerrainMesh {
 
     const heatPos = this.heatOverlayGeometry.attributes.position;
     for (let i = 0; i < heatPos.count; i++) {
-      heatPos.setY(i, posAttr.getY(i) + 0.4);
+      heatPos.setY(i, posAttr.getY(i) + (this.reliefMorph > 0.05 ? 0.4 : 0.05));
     }
     heatPos.needsUpdate = true;
     this.heatOverlayGeometry.computeVertexNormals();

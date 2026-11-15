@@ -18,4 +18,16 @@ export function makeProjector(baseLat, baseLon) {
   };
 }
 
+export function makeUnprojector(baseLat, baseLon) {
+  const baseLatRad = (baseLat * Math.PI) / 180;
+
+  return function unproject(x, z) {
+    const dLatRad = -z / (EARTH_RADIUS_M * SCENE_SCALE);
+    const dLonRad = x / (Math.cos(baseLatRad) * EARTH_RADIUS_M * SCENE_SCALE);
+    const lat = baseLat + (dLatRad * 180) / Math.PI;
+    const lon = baseLon + (dLonRad * 180) / Math.PI;
+    return { lat, lon };
+  };
+}
+
 export const ELEVATION_SCALE = 1 / 40; // metros -> unidades de escena (eje Y)

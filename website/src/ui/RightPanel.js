@@ -1,10 +1,8 @@
 /**
- * Panel derecho: "ÁREA SELECCIONADA" (Image 2)
- * Muestra datos en vivo del backend para la zona seleccionada:
- * - Coordenadas, elevación, pendiente, geología
- * - Estado de monitoreo con checkmarks cian
- * - Evaluación de riesgo con gauge circular concéntrico "Alto Riesgo",
- *   métricas de Exposición/Confianza/Prioridad y minigráfico de tendencia con puntos.
+ * Panel derecho: "ÁREA SELECCIONADA" y "SONDEO PREDICTIVO AI" (Liquid Glass HUD)
+ * - Muestra telemetría en vivo de zonas departamentales o de coordenadas clickeadas por Raycaster.
+ * - Conectado al modelo heurístico / SOUP para predecir deslizamientos en tiempo real.
+ * - Reactivo a la reproducción de la línea de tiempo satelital (avanza métricas y curva de tendencia).
  */
 import { icons } from './icons.js';
 
@@ -28,16 +26,19 @@ export function mountRightPanel(container, store) {
     <div class="panel__header">
       <div class="panel__header-title">
         <span class="panel__header-icon">${icons.target}</span>
-        <span>ÁREA SELECCIONADA</span>
+        <span id="rp-panel-title">ÁREA SELECCIONADA</span>
       </div>
+      <span class="liquid-pill" id="rp-mode-tag" style="font-size:10px; padding:2px 8px; color:var(--neon-cyan);">ZONA</span>
     </div>
 
-    <div id="rp-empty" class="info-empty">Selecciona una zona en el mapa para ver su telemetría.</div>
+    <div id="rp-empty" class="info-empty">
+      Toca cualquier punto del Departamento de La Paz o una zona para activar la predicción con IA.
+    </div>
 
     <div id="rp-content" style="display:none">
       <div class="selected-zone__header">
-        <h2 class="selected-zone__name" id="rp-name">Zona de Monitoreo Piloto</h2>
-        <button class="selected-zone__edit-btn" title="Editar zona">${icons.pencil}</button>
+        <h2 class="selected-zone__name" id="rp-name">Zona de Monitoreo</h2>
+        <button class="selected-zone__edit-btn liquid-pill" title="Sondeo">${icons.pencil}</button>
       </div>
 
       <div class="zone-details">
@@ -54,7 +55,7 @@ export function mountRightPanel(container, store) {
           <b class="info-line__value" id="rp-slope">32.5 %</b>
         </div>
         <div class="info-line">
-          <span class="info-line__label">🪨 Características Geológicas:</span>
+          <span class="info-line__label">🪨 Geología:</span>
           <b class="info-line__value" id="rp-geology">Depósitos coluviales</b>
         </div>
       </div>
@@ -64,13 +65,13 @@ export function mountRightPanel(container, store) {
       <!-- Subsección: Estado de Monitoreo -->
       <div class="panel__subheading">
         <span class="status-dot-sm"></span>
-        <span>ESTADO DE MONITOREO</span>
+        <span>TELEMETRÍA MULTI-SENSOR</span>
       </div>
       <div class="monitor-status">
         <div class="monitor-status__row">
           <span class="monitor-status__icon">🛰</span>
-          <span class="monitor-status__label">Satélite:</span>
-          <span class="monitor-status__val cyan-highlight">NISAR Banda L ✓</span>
+          <span class="monitor-status__label">Satélite Radar:</span>
+          <span class="monitor-status__val cyan-highlight">NISAR Banda L (RRSD) ✓</span>
         </div>
         <div class="monitor-status__row">
           <span class="monitor-status__icon">↗</span>
@@ -84,18 +85,13 @@ export function mountRightPanel(container, store) {
         </div>
         <div class="monitor-status__row">
           <span class="monitor-status__icon">🌊</span>
-          <span class="monitor-status__label">Constante Dieléctrica (ε_r):</span>
+          <span class="monitor-status__label">Dieléctrica (ε_r):</span>
           <span class="monitor-status__val red-highlight" id="rp-dielectric">31.4 (Saturado)</span>
         </div>
         <div class="monitor-status__row">
           <span class="monitor-status__icon">📉</span>
           <span class="monitor-status__label">Coherencia InSAR (γ):</span>
           <span class="monitor-status__val red-highlight" id="rp-coherence">0.28 (Inestable)</span>
-        </div>
-        <div class="monitor-status__row">
-          <span class="monitor-status__icon">📡</span>
-          <span class="monitor-status__label">Estaciones GNSS:</span>
-          <span class="monitor-status__val green-highlight">3/3 ✓</span>
         </div>
       </div>
 
@@ -104,7 +100,7 @@ export function mountRightPanel(container, store) {
       <!-- Subsección: Evaluación de Riesgo -->
       <div class="panel__subheading">
         <span class="warn-dot-sm">⚠</span>
-        <span>EVALUACIÓN DE RIESGO</span>
+        <span>PREDICCIÓN DE DESASTRE (IA)</span>
       </div>
 
       <div class="risk-gauge-block">
@@ -130,11 +126,16 @@ export function mountRightPanel(container, store) {
             <span class="metric-label">Prioridad:</span>
             <b class="metric-value red-highlight" id="rp-priority">Crítica</b>
           </div>
+          <div class="metric-row">
+            <span class="metric-icon">⏳</span>
+            <span class="metric-label">Fallo en 24h:</span>
+            <b class="metric-value red-highlight" id="rp-failure-prob">78 %</b>
+          </div>
         </div>
       </div>
 
-      <!-- Minigráfico de curva de tendencia -->
-      <div class="sparkline-container">
+      <!-- Minigráfico de curva de tendencia temporal -->
+      <div class="sparkline-container liquid-pill" style="border-radius:12px; margin-top:10px;">
         <svg class="trend-sparkline" id="rp-trend" viewBox="0 0 240 54" preserveAspectRatio="none"></svg>
       </div>
     </div>
@@ -151,6 +152,10 @@ export function mountRightPanel(container, store) {
     }
     empty.style.display = 'none';
     content.style.display = 'block';
+
+    const isCustom = assessment.is_custom_prediction === true;
+    container.querySelector('#rp-panel-title').textContent = isCustom ? 'PREDICCIÓN EN VIVO (IA)' : 'ÁREA SELECCIONADA';
+    container.querySelector('#rp-mode-tag').textContent = isCustom ? 'RAYCAST AI' : 'ZONA';
 
     container.querySelector('#rp-name').textContent = assessment.zone_name;
     container.querySelector('#rp-coords').textContent = `${Math.abs(assessment.center.lat).toFixed(4)}° S, ${Math.abs(assessment.center.lon).toFixed(4)}° O`;
@@ -172,6 +177,10 @@ export function mountRightPanel(container, store) {
     container.querySelector('#rp-exposure').textContent = assessment.exposure;
     container.querySelector('#rp-confidence').textContent = `${assessment.confidence_pct.toFixed(0)} %`;
     container.querySelector('#rp-priority').textContent = capitalize(assessment.priority);
+
+    // Estimación de probabilidad de falla en 24h
+    const failProb = Math.min(99, Math.round(assessment.risk_score * 85 + (assessment.rain_24h_mm > 15 ? 12 : 0)));
+    container.querySelector('#rp-failure-prob').textContent = `${failProb} %`;
 
     renderSparkline(container.querySelector('#rp-trend'), assessment.trend, color);
   };

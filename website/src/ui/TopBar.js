@@ -50,10 +50,13 @@ export function mountTopBar(container, store) {
         <span class="status-dot"></span>
         <span id="topbar-status-label">Sistema Operativo</span>
       </div>
-      <button class="topbar__theme-btn" id="btn-toggle-theme" title="Alternar Modo Claro / Oscuro">
+      <button class="topbar__view-btn liquid-pill" id="btn-topbar-viewmode" title="Alternar Vista Plana 2D y Google Earth 3D">
+        🚀 Google Earth 3D
+      </button>
+      <button class="topbar__theme-btn liquid-pill" id="btn-toggle-theme" title="Alternar Modo Claro / Oscuro">
         ☀️ Modo Claro
       </button>
-      <button class="topbar__info-btn" id="btn-toggle-info" title="Información del Proyecto y Misión NISAR">
+      <button class="topbar__info-btn liquid-pill" id="btn-toggle-info" title="Información del Proyecto y Misión NISAR">
         ℹ Misión
       </button>
       <div class="topbar__user" title="Perfil de usuario">
@@ -61,6 +64,18 @@ export function mountTopBar(container, store) {
       </div>
     </div>
   `;
+
+  const viewBtn = container.querySelector('#btn-topbar-viewmode');
+  viewBtn?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('toggle-viewmode'));
+  });
+
+  window.addEventListener('viewmode-changed', (e) => {
+    const mode = e.detail?.mode ?? '3d';
+    if (viewBtn) {
+      viewBtn.textContent = mode === 'flat' ? '🚀 Google Earth 3D' : '🗺 Vista Plana 2D';
+    }
+  });
 
   const themeBtn = container.querySelector('#btn-toggle-theme');
   themeBtn?.addEventListener('click', () => {

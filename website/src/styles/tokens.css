@@ -1,26 +1,31 @@
 /**
- * Tokens de diseño Image-to-Code: Soporte para Modo Oscuro y Modo Claro (Light Mode)
- * - Modo Oscuro: Deep Space Navy, cyan glow, text blanco/plata.
- * - Modo Claro: Clean Daylight Google Earth, white glassmorphism, sombras sutiles, texto oscuro nítido.
+ * Tokens de diseño Image-to-Code: Soporte para Liquid Glass y Modo Claro/Oscuro
+ * - Liquid Glass: Refracción dinámica, borde especular fluido, reflejos de luz iridiscentes.
+ * - Modo Oscuro: Deep Space Navy, cyan glow, cristal líquido ahumado con reflejos cian.
+ * - Modo Claro: Clean Daylight Google Earth, liquid white glass, reflejos especulares de alta fidelidad.
  */
 
 :root {
-  /* Fondo base y superficies glassmorphism (Modo Oscuro default) */
+  /* Fondo base y superficies Liquid Glass (Modo Oscuro default) */
   --bg-deep: #060b13;
-  --hud-glass-bg: rgba(10, 18, 30, 0.82);
-  --hud-glass-card: rgba(13, 24, 42, 0.78);
-  --hud-glass-border: rgba(255, 255, 255, 0.09);
-  --hud-glass-border-focus: rgba(34, 211, 238, 0.35);
+  --hud-glass-bg: linear-gradient(135deg, rgba(14, 23, 42, 0.78) 0%, rgba(8, 14, 26, 0.65) 100%);
+  --hud-glass-card: linear-gradient(145deg, rgba(20, 32, 54, 0.72) 0%, rgba(10, 18, 32, 0.58) 100%);
+  --hud-glass-pill: linear-gradient(120deg, rgba(34, 211, 238, 0.16) 0%, rgba(14, 23, 42, 0.6) 100%);
+  --hud-glass-border: rgba(255, 255, 255, 0.12);
+  --hud-glass-border-focus: rgba(34, 211, 238, 0.55);
+  --hud-specular: inset 0 1.5px 1px rgba(255, 255, 255, 0.28), inset 0 -1px 2px rgba(0, 0, 0, 0.35);
+  --hud-liquid-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.65), 0 0 24px rgba(34, 211, 238, 0.08);
 
   /* Paleta cromática TERRA-SAR */
   --terra-blue-deep: #0284c7;
   --terra-blue-bright: #38bdf8;
   --neon-cyan: #22d3ee;
-  --neon-cyan-glow: rgba(34, 211, 238, 0.28);
+  --neon-cyan-glow: rgba(34, 211, 238, 0.32);
   --neon-orange: #f97316;
   --neon-red: #ef4444;
   --neon-green: #22c55e;
   --neon-yellow: #eab308;
+  --chroma-purple: #c084fc;
 
   /* Tipografías y textos */
   --text-primary: #f8fafc;
@@ -29,29 +34,33 @@
   --text-dim: #475569;
 
   /* Bordes y radios */
-  --radius-hud: 16px;
-  --radius-card: 12px;
-  --radius-pill: 20px;
-  --radius-sm: 8px;
+  --radius-hud: 18px;
+  --radius-card: 14px;
+  --radius-pill: 24px;
+  --radius-sm: 10px;
 
   /* Transiciones */
   --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-liquid: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ========================================================
-   MODO CLARO (Light Mode) — Estilo Google Earth Diurno
+   MODO CLARO (Light Mode) — Liquid Glass Diurno Google Earth
    ======================================================== */
 [data-theme='light'] {
   --bg-deep: #e8eef6;
-  --hud-glass-bg: rgba(255, 255, 255, 0.88);
-  --hud-glass-card: rgba(248, 250, 252, 0.92);
-  --hud-glass-border: rgba(15, 23, 42, 0.12);
-  --hud-glass-border-focus: rgba(2, 132, 199, 0.5);
+  --hud-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(241, 245, 249, 0.76) 100%);
+  --hud-glass-card: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.82) 100%);
+  --hud-glass-pill: linear-gradient(120deg, rgba(2, 132, 199, 0.12) 0%, rgba(255, 255, 255, 0.85) 100%);
+  --hud-glass-border: rgba(15, 23, 42, 0.14);
+  --hud-glass-border-focus: rgba(2, 132, 199, 0.65);
+  --hud-specular: inset 0 1.5px 1px rgba(255, 255, 255, 0.9), inset 0 -1px 2px rgba(15, 23, 42, 0.06);
+  --hud-liquid-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.14), 0 2px 12px rgba(2, 132, 199, 0.08);
 
   --terra-blue-deep: #0369a1;
   --terra-blue-bright: #0284c7;
   --neon-cyan: #0284c7;
-  --neon-cyan-glow: rgba(2, 132, 199, 0.2);
+  --neon-cyan-glow: rgba(2, 132, 199, 0.22);
 
   --text-primary: #0f172a;
   --text-secondary: #334155;
